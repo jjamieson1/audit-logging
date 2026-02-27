@@ -1,0 +1,210 @@
+{
+  "info": {
+    "name": "Audit Logging API",
+    "description": "Postman collection for the tamper-evident audit logging service.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "appName",
+      "value": "postman-client"
+    },
+    {
+      "key": "level",
+      "value": "INFO"
+    },
+    {
+      "key": "message",
+      "value": "event created from postman"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Write Log",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"app\": \"{{appName}}\",\n  \"level\": \"{{level}}\",\n  \"message\": \"{{message}}\",\n  \"metadata\": {\n    \"source\": \"postman\",\n    \"traceId\": \"trace-001\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "logs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Logs (Paginated)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/logs?limit=50&offset=0",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "logs"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Logs by App + Level",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/logs?app={{appName}}&level=ERROR&limit=25",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "logs"
+          ],
+          "query": [
+            {
+              "key": "app",
+              "value": "{{appName}}"
+            },
+            {
+              "key": "level",
+              "value": "ERROR"
+            },
+            {
+              "key": "limit",
+              "value": "25"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Search Logs (q)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/logs/search?q=timeout&limit=10&offset=0",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "logs",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "timeout"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Chain",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/verify",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "verify"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Invalid Payload Example",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"app\": \"{{appName}}\",\n  \"level\": \"INFO\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "logs"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
