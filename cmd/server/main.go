@@ -91,9 +91,9 @@ func loadConfig() Config {
 	storageBackend := strings.ToLower(getEnv("STORAGE_BACKEND", "file"))
 	databaseURL := getEnv("DATABASE_URL", "")
 
-	port, _ := strconv.Atoi(getEnv("PORT", "8080"))
+	port, _ := strconv.Atoi(getEnv("PORT", "3001"))
 	if port <= 0 {
-		port = 8080
+		port = 3001
 	}
 
 	maxPayloadBytes, _ := strconv.ParseInt(getEnv("MAX_PAYLOAD_BYTES", "32768"), 10, 64)

@@ -30,6 +30,9 @@ type Client struct {
 	Endpoint   string
 	HTTPClient *http.Client
 	Retry      RetryConfig
+	AuthToken  string
+	Headers    map[string]string
+	OnRetry    func(attempt int, delay time.Duration, err error)
 }
 
 type RetryConfig struct {
@@ -51,7 +54,7 @@ const (
 func New(endpoint string, httpClient *http.Client) *Client {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
-		endpoint = "http://localhost:8080/v1/logs"
+		endpoint = "http://localhost:3001/v1/logs"
 	}
 
 	if httpClient == nil {
@@ -119,6 +122,15 @@ func (c *Client) WriteLog(ctx context.Context, payload LogRequest) (LogResponse,
 			return LogResponse{}, err
 		}
 		req.Header.Set("content-type", "application/json")
+		if strings.TrimSpace(c.AuthToken) != "" {
+			req.Header.Set("authorization", "Bearer "+strings.TrimSpace(c.AuthToken))
+		}
+		for key, value := range c.Headers {
+			if strings.TrimSpace(key) == "" {
+				continue
+			}
+			req.Header.Set(key, value)
+		}
 
 		res, err := c.HTTPClient.Do(req)
 		if err != nil {
@@ -147,6 +159,9 @@ func (c *Client) WriteLog(ctx context.Context, payload LogRequest) (LogResponse,
 		}
 
 		delay := computeRetryDelay(backoff, previousDelay, initialBackoff, maxBackoff, maxJitter, jitterStrategy)
+		if c.OnRetry != nil {
+			c.OnRetry(attempt, delay, lastErr)
+		}
 		if err := sleepWithContext(ctx, delay); err != nil {
 			return LogResponse{}, err
 		}

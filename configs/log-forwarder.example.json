@@ -1,0 +1,22 @@
+{
+  "server_url": "http://localhost:3001/v1/logs",
+  "auth_bearer_token": "replace-with-token",
+  "source_file": "./data/audit.log.jsonl",
+  "app_name": "payments-api",
+  "timestamp_field": "timestamp",
+  "parser_mode": "custom",
+  "regex_pattern": "",
+  "default_level": "INFO",
+  "poll_interval_ms": 250,
+  "batch_size": 1,
+  "flush_interval_ms": 1000,
+  "checkpoint_path": "./data/log-forwarder.checkpoint.json",
+  "retry_max_attempts": 5,
+  "retry_initial_backoff_ms": 200,
+  "retry_max_backoff_ms": 5000,
+  "request_timeout_ms": 10000,
+  "dead_letter_path": "./data/log-forwarder.deadletter.jsonl",
+  "metrics_port": 9091,
+  "metrics_report_interval_ms": 30000,
+  "verify_interval_ms": 60000
+}

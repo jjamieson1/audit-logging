@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-.PHONY: up down test logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty
+.PHONY: up down test logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty forwarder-validate forwarder-run
 
 up:
 	docker compose up --build
@@ -48,3 +48,9 @@ retry-sim-slow:
 
 retry-sim-bursty:
 	SIM_ATTEMPTS=8 SIM_INITIAL_BACKOFF_MS=100 SIM_MAX_BACKOFF_MS=4000 SIM_MAX_JITTER_MS=1200 node ./clients/retry-sim.mjs
+
+forwarder-validate:
+	go run ./cmd/log-forwarder -config ./configs/log-forwarder.example.json -validate-only
+
+forwarder-run:
+	go run ./cmd/log-forwarder -config ./configs/log-forwarder.example.json

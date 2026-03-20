@@ -107,6 +107,60 @@ make retry-sim-bursty
 
 For producer client usage, reusable Go/Node client libraries, retry tuning options, and retry simulation presets, see `clients/README.md`.
 
+## Log Forwarder Agent (M6)
+
+A new log-forwarder command is available with file-based config loading, checkpoint resume, inode-aware file following, line parsing/normalization, REST delivery, durable checkpoint persistence, and runtime observability.
+
+For complete usage and operations details, see `cmd/log-forwarder/README.md`.
+
+Run config validation:
+
+```bash
+go run ./cmd/log-forwarder -config ./configs/log-forwarder.example.json -validate-only
+```
+
+Run the process:
+
+```bash
+go run ./cmd/log-forwarder -config ./configs/log-forwarder.example.json
+```
+
+Use the example config at `configs/log-forwarder.example.json` as a starting point.
+
+Parser-related config:
+
+- `parser_mode`: `json`, `regex`, or `custom`
+- `regex_pattern`: required when `parser_mode=regex`
+- `default_level`: used when parsed line does not include a level
+
+M6 config:
+
+- `metrics_port`: bind port for `/healthz` (set `0` to disable)
+- `metrics_report_interval_ms`: interval for metrics summary log lines
+- `verify_interval_ms`: interval for remote integrity checks against `/v1/verify`
+
+Delivery behavior:
+
+- Writes to the configured audit endpoint using the shared Go client retry policy
+- Sends bearer auth via `auth_bearer_token`
+- Computes and sends `x-idempotency-key` per line
+- On delivery failure after retries, appends an entry to `dead_letter_path` and continues
+
+Observability and integrity:
+
+- Periodic metrics logs include sent, retried, failed, dead-lettered, and duplicate-key indicators
+- Optional health endpoint at `/healthz` on `metrics_port`
+- Periodic integrity checks call `GET /v1/verify` based on `verify_interval_ms`
+
+Current status:
+
+- M1 implemented: config load/validate + startup runtime shell
+- M2 implemented: file tailing with checkpoint offsets and rename/truncate handling
+- M3 implemented: parser modes (`json`, `regex`, `custom`) and normalized payload mapping
+- M4 implemented: HTTP send loop with retry + bearer auth + idempotency header and dead-letter fallback
+- M5 implemented: atomic checkpoint writes with temp-file sync and directory sync
+- M6 implemented: runtime metrics counters + health endpoint + periodic integrity verification
+
 ### Run with PostgreSQL
 
 ```bash

@@ -1,0 +1,19 @@
+[Unit]
+Description=audit service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=audit
+Group=audit
+WorkingDirectory=/app/audit
+PIDFile=/app/audit/audit.pid
+ExecStart=/app/audit/start.sh
+ExecStop=/app/audit/stop.sh
+ExecReload=/app/audit/restart.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
