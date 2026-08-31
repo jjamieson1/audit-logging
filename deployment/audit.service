@@ -1,0 +1,33 @@
+[Unit]
+Description=Audit logging service
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=audit
+Group=audit
+WorkingDirectory=/app/audit
+EnvironmentFile=/etc/audit/audit.env
+ExecStart=/app/audit/audit
+Restart=always
+RestartSec=5
+
+# The service keeps all state in PostgreSQL, so it needs nothing writable on disk.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+
+[Install]
+WantedBy=multi-user.target

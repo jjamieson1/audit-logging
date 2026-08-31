@@ -23,6 +23,7 @@ import (
 
 type Config struct {
 	Port            int
+	BindAddr        string
 	StorageBackend  string
 	DatabaseURL     string
 	LogFile         string
@@ -91,9 +92,11 @@ func loadConfig() Config {
 	storageBackend := strings.ToLower(getEnv("STORAGE_BACKEND", "file"))
 	databaseURL := getEnv("DATABASE_URL", "")
 
-	port, _ := strconv.Atoi(getEnv("PORT", "3001"))
+	bindAddr := getEnv("BIND_ADDR", "")
+
+	port, _ := strconv.Atoi(getEnv("PORT", "8080"))
 	if port <= 0 {
-		port = 3001
+		port = 8080
 	}
 
 	maxPayloadBytes, _ := strconv.ParseInt(getEnv("MAX_PAYLOAD_BYTES", "32768"), 10, 64)
@@ -103,11 +106,18 @@ func loadConfig() Config {
 
 	return Config{
 		Port:            port,
+		BindAddr:        bindAddr,
 		StorageBackend:  storageBackend,
 		DatabaseURL:     databaseURL,
 		LogFile:         logFile,
 		MaxPayloadBytes: maxPayloadBytes,
 	}
+}
+
+// ListenAddr is the address the HTTP server binds to. An empty BIND_ADDR
+// listens on all interfaces; set it to 127.0.0.1 to accept loopback only.
+func (c Config) ListenAddr() string {
+	return fmt.Sprintf("%s:%d", c.BindAddr, c.Port)
 }
 
 func getEnv(key, fallback string) string {
@@ -785,7 +795,7 @@ func main() {
 		writeJSON(w, http.StatusConflict, result)
 	}))
 
-	addr := fmt.Sprintf(":%d", cfg.Port)
+	addr := cfg.ListenAddr()
 	log.Printf("audit-logging listening on %s", addr)
 
 	if err := http.ListenAndServe(addr, mux); err != nil {

@@ -103,6 +103,18 @@ make retry-sim-slow
 make retry-sim-bursty
 ```
 
+## Deploy to a server
+
+Deployment to an Ubuntu 24.04 host lives in `deployment/`:
+
+```bash
+./deployment/provision.sh <ssh-host>   # one-time: PostgreSQL, service user, systemd unit
+./deployment/deploy.sh <ssh-host>      # build, ship, restart, health-check
+```
+
+See `deployment/README.md` for the server layout, rollback, tunnelling and
+credential rotation.
+
 ## Producer Clients
 
 For producer client usage, reusable Go/Node client libraries, retry tuning options, and retry simulation presets, see `clients/README.md`.
@@ -154,12 +166,12 @@ Observability and integrity:
 
 Current status:
 
-- M1 implemented: config load/validate + startup runtime shell
-- M2 implemented: file tailing with checkpoint offsets and rename/truncate handling
-- M3 implemented: parser modes (`json`, `regex`, `custom`) and normalized payload mapping
-- M4 implemented: HTTP send loop with retry + bearer auth + idempotency header and dead-letter fallback
-- M5 implemented: atomic checkpoint writes with temp-file sync and directory sync
-- M6 implemented: runtime metrics counters + health endpoint + periodic integrity verification
+- implemented: config load/validate + startup runtime shell
+- implemented: file tailing with checkpoint offsets and rename/truncate handling
+- implemented: parser modes (`json`, `regex`, `custom`) and normalized payload mapping
+- implemented: HTTP send loop with retry + bearer auth + idempotency header and dead-letter fallback
+- implemented: atomic checkpoint writes with temp-file sync and directory sync
+- implemented: runtime metrics counters + health endpoint + periodic integrity verification
 
 ### Run with PostgreSQL
 
@@ -172,6 +184,7 @@ go run ./cmd/server
 ## Config
 
 - `PORT` (default `8080`)
+- `BIND_ADDR` (default empty, listening on all interfaces; set `127.0.0.1` for loopback only)
 - `STORAGE_BACKEND` (default `file`; options: `file`, `postgres`)
 - `DATABASE_URL` (required when `STORAGE_BACKEND=postgres`)
 - `DATA_DIR` (default `./data`)
