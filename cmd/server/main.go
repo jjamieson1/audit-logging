@@ -161,13 +161,21 @@ func getEnv(key, fallback string) string {
 	return value
 }
 
+// NewFileStore opens (or creates) the append-only log file.
+//
+// The file is created 0640 and its directory 0750 rather than the usual
+// 0644/0755: audit entries carry request metadata — client IPs, identity
+// ids, OIDC claims — and there is no reason for every local account on the
+// host to be able to read them. Note this affects creation only; an existing
+// file keeps the mode it already has, so deployments upgrading from 0644
+// need a one-off chmod.
 func NewFileStore(path string) (*FileStore, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return nil, err
 	}
 
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		if err := os.WriteFile(path, []byte{}, 0o644); err != nil {
+		if err := os.WriteFile(path, []byte{}, 0o640); err != nil {
 			return nil, err
 		}
 	} else if err != nil {
@@ -218,7 +226,7 @@ func (s *FileStore) Append(record LogRecord) (Entry, error) {
 		return Entry{}, err
 	}
 
-	file, err := os.OpenFile(s.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	file, err := os.OpenFile(s.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o640)
 	if err != nil {
 		return Entry{}, err
 	}
@@ -765,7 +773,20 @@ func main() {
 	addr := cfg.ListenAddr()
 	log.Printf("audit-logging listening on %s", addr)
 
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	// Explicit timeouts: http.ListenAndServe has none, so a client can hold a
+	// connection open indefinitely (Slowloris). WriteTimeout is deliberately
+	// generous because GET /v1/verify walks the entire chain, and a timeout
+	// shorter than that scan would make verification fail on a large log.
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      120 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
