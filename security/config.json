@@ -76,10 +76,10 @@
       "name": "Secret scan",
       "category": "Secrets",
       "tool": "gitleaks",
-      "gating": false,
+      "gating": true,
       "command": "gitleaks detect --no-banner --redact",
       "parser": "gitleaks",
-      "installHint": "brew install gitleaks",
+      "installHint": "go install github.com/zricethezav/gitleaks/v8@latest",
       "source": "detected"
     },
     {
