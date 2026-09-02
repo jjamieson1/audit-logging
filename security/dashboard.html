@@ -143,18 +143,18 @@
 
   
   <div class="panel hero">
-    <div class="badge red"><span class="dot">■</span></div>
+    <div class="badge amber"><span class="dot">▲</span></div>
     <div class="meta">
       <h1>audit-logging</h1>
       <div class="sub"></div>
       <div class="facts">
-        <span><b>Action required</b> — 1 gating check failing</span>
+        <span><b>Passing with advisories</b> — advisories and/or checks awaiting enablement</span>
       </div>
       
       <div class="facts">
-        <span>Last comprehensive scan <b>2026-09-02 15:11 MDT</b></span>
-        <span>Trigger <b>manual</b></span>
-        <span>Commit <b class="mono">0c9ceae</b> (security-scan)</span>
+        <span>Last comprehensive scan <b>2026-09-02 15:45 MDT</b></span>
+        <span>Trigger <b>pre-push</b></span>
+        <span>Commit <b class="mono">663b1a3</b> (gosec-cleanup)</span>
       </div>
       
     </div>
@@ -163,15 +163,15 @@
   
   
   <div class="tiles">
-    <div class="tile ok"><div class="n">6</div><div class="l">Passing</div></div>
+    <div class="tile ok"><div class="n">7</div><div class="l">Passing</div></div>
     <div class="tile warn"><div class="n">2</div><div class="l">Advisories</div></div>
-    <div class="tile bad"><div class="n">1</div><div class="l">Failing</div></div>
+    <div class="tile bad"><div class="n">0</div><div class="l">Failing</div></div>
     <div class="tile muted"><div class="n">1</div><div class="l">Not run</div></div>
   </div>
   <div class="bar">
-    <span class="ok" style="flex:6"></span>
+    <span class="ok" style="flex:7"></span>
     <span class="warn" style="flex:2"></span>
-    <span class="bad" style="flex:1"></span>
+    
     <span class="muted" style="flex:1"></span>
   </div>
 
@@ -198,9 +198,72 @@
         <span class="ok" style="flex:6"></span>
       </div>
       
+      <div class="tcol" title="2026-09-02 15:18 MDT — 6 pass, 2 advisory, 1 fail, 1 not run">
+        <span class="bad" style="flex:1"></span>
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:6"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:20 MDT — 6 pass, 2 advisory, 1 fail, 1 not run">
+        <span class="bad" style="flex:1"></span>
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:6"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:27 MDT — 6 pass, 2 advisory, 1 fail, 1 not run">
+        <span class="bad" style="flex:1"></span>
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:6"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:28 MDT — 6 pass, 2 advisory, 1 fail, 1 not run">
+        <span class="bad" style="flex:1"></span>
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:6"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:29 MDT — 6 pass, 2 advisory, 1 fail, 1 not run">
+        <span class="bad" style="flex:1"></span>
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:6"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:38 MDT — 7 pass, 2 advisory, 0 fail, 1 not run">
+        
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:7"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:43 MDT — 7 pass, 2 advisory, 0 fail, 1 not run">
+        
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:7"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:44 MDT — 7 pass, 2 advisory, 0 fail, 1 not run">
+        
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:7"></span>
+      </div>
+      
+      <div class="tcol" title="2026-09-02 15:45 MDT — 7 pass, 2 advisory, 0 fail, 1 not run">
+        
+        <span class="warn" style="flex:2"></span>
+        <span class="muted" style="flex:1"></span>
+        <span class="ok" style="flex:7"></span>
+      </div>
+      
     </div>
     <div class="tlabels">
-      <div>3115273</div><div>0c9ceae</div>
+      <div>3115273</div><div>0c9ceae</div><div>b25dfb0</div><div>187f840</div><div>f4ad0fb</div><div>28c55b2</div><div>28c55b2</div><div>8d2e472</div><div>8c36b4d</div><div>663b1a3</div><div>663b1a3</div>
     </div>
     <div class="legend">
       <span><i style="background:var(--ok)"></i>Passing</span>
@@ -225,15 +288,15 @@
     <h3>Dependencies</h3>
     <div class="rows">
       
-      <div class="row" data-status="bad">
-        <span class="pill bad">Fail</span>
+      <div class="row" data-status="ok">
+        <span class="pill ok">Pass</span>
         <div class="grow">
           <div class="name">Known vulnerabilities (Go)</div>
-          <div class="sum">23 vulnerabilities your code calls</div>
+          <div class="sum">no known vulnerable dependencies called</div>
         </div>
         <span class="gate">GATING</span>
         <span class="tool">govulncheck</span>
-        <a href="runs/20260902T211141Z/govulncheck.txt">View report →</a>
+        <a href="runs/20260902T214509Z/govulncheck.txt">View report →</a>
       </div>
       
       <div class="row" data-status="ok">
@@ -244,7 +307,7 @@
         </div>
         
         <span class="tool">npm</span>
-        <a href="runs/20260902T211141Z/npm-audit-clients-node-producer.txt">View report →</a>
+        <a href="runs/20260902T214509Z/npm-audit-clients-node-producer.txt">View report →</a>
       </div>
       
     </div>
@@ -280,7 +343,7 @@
         </div>
         <span class="gate">GATING</span>
         <span class="tool">go</span>
-        <a href="runs/20260902T211141Z/build.txt">View report →</a>
+        <a href="runs/20260902T214509Z/build.txt">View report →</a>
       </div>
       
       <div class="row" data-status="ok">
@@ -291,7 +354,7 @@
         </div>
         <span class="gate">GATING</span>
         <span class="tool">go</span>
-        <a href="runs/20260902T211141Z/vet.txt">View report →</a>
+        <a href="runs/20260902T214509Z/vet.txt">View report →</a>
       </div>
       
       <div class="row" data-status="ok">
@@ -302,7 +365,7 @@
         </div>
         <span class="gate">GATING</span>
         <span class="tool">go test</span>
-        <a href="runs/20260902T211141Z/tests.txt">View report →</a>
+        <a href="runs/20260902T214509Z/tests.txt">View report →</a>
       </div>
       
     </div>
@@ -316,11 +379,11 @@
         <span class="pill warn">Advisory</span>
         <div class="grow">
           <div class="name">Static analysis (Go)</div>
-          <div class="sum">59 issues</div>
+          <div class="sum">41 issues</div>
         </div>
         
         <span class="tool">gosec</span>
-        <a href="runs/20260902T211141Z/gosec.txt">View report →</a>
+        <a href="runs/20260902T214509Z/gosec.txt">View report →</a>
       </div>
       
       <div class="row" data-status="warn">
@@ -331,7 +394,7 @@
         </div>
         
         <span class="tool">semgrep</span>
-        <a href="runs/20260902T211141Z/semgrep.txt">View report →</a>
+        <a href="runs/20260902T214509Z/semgrep.txt">View report →</a>
       </div>
       
     </div>
@@ -347,9 +410,9 @@
           <div class="name">Secret scan</div>
           <div class="sum">no secrets detected</div>
         </div>
-        
+        <span class="gate">GATING</span>
         <span class="tool">gitleaks</span>
-        <a href="runs/20260902T211141Z/gitleaks.txt">View report →</a>
+        <a href="runs/20260902T214509Z/gitleaks.txt">View report →</a>
       </div>
       
     </div>
@@ -367,7 +430,7 @@
         </div>
         
         <span class="tool">syft</span>
-        <a href="runs/20260902T211141Z/sbom.txt">View report →</a>
+        <a href="runs/20260902T214509Z/sbom.txt">View report →</a>
       </div>
       
     </div>
@@ -381,6 +444,141 @@
   <table>
     <thead><tr><th>When</th><th>Trigger</th><th>Commit</th><th>Composition</th><th>Result</th></tr></thead>
     <tbody>
+    
+      <tr>
+        <td>2026-09-02 15:45 MDT</td>
+        <td>pre-push</td>
+        <td class="mono">663b1a3</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:70px" title="7 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill ok">gates green</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:44 MDT</td>
+        <td>manual</td>
+        <td class="mono">663b1a3</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:70px" title="7 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill ok">gates green</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:43 MDT</td>
+        <td>manual</td>
+        <td class="mono">8c36b4d</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:70px" title="7 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill ok">gates green</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:38 MDT</td>
+        <td>manual</td>
+        <td class="mono">8d2e472</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:70px" title="7 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill ok">gates green</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:29 MDT</td>
+        <td>manual</td>
+        <td class="mono">28c55b2</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:60px" title="6 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            <span class="bad" style="width:10px"></span>
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill bad">1 gating fail</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:28 MDT</td>
+        <td>manual</td>
+        <td class="mono">28c55b2</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:60px" title="6 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            <span class="bad" style="width:10px"></span>
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill bad">1 gating fail</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:27 MDT</td>
+        <td>pre-push</td>
+        <td class="mono">f4ad0fb</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:60px" title="6 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            <span class="bad" style="width:10px"></span>
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill bad">1 gating fail</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:20 MDT</td>
+        <td>pre-push</td>
+        <td class="mono">187f840</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:60px" title="6 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            <span class="bad" style="width:10px"></span>
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill bad">1 gating fail</span></td>
+      </tr>
+    
+      <tr>
+        <td>2026-09-02 15:18 MDT</td>
+        <td>manual</td>
+        <td class="mono">b25dfb0</td>
+        <td>
+          <span class="minibar">
+            <span class="ok" style="width:60px" title="6 pass"></span>
+            <span class="warn" style="width:20px"></span>
+            <span class="bad" style="width:10px"></span>
+            <span class="muted" style="width:10px"></span>
+          </span>
+        </td>
+        <td><span class="pill bad">1 gating fail</span></td>
+      </tr>
     
       <tr>
         <td>2026-09-02 15:11 MDT</td>
@@ -513,7 +711,7 @@
   
 
   <div class="foot">
-    Generated 2026-09-02 15:11 MDT · <span class="mono">go run ./cmd/security-dashboard scan</span> to refresh ·
+    Generated 2026-09-02 15:45 MDT · <span class="mono">go run ./cmd/security-dashboard scan</span> to refresh ·
     
     
   </div>
