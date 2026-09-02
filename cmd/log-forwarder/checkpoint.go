@@ -20,6 +20,8 @@ type Checkpoint struct {
 }
 
 func LoadCheckpoint(path string) (Checkpoint, error) {
+	// #nosec G304 -- path is the operator-supplied checkpoint_path from the
+	// forwarder's own config file, not caller input.
 	file, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -56,6 +58,8 @@ func SaveCheckpoint(path string, cp Checkpoint) error {
 	}
 
 	tmpPath := path + ".tmp"
+	// #nosec G304,G302 -- operator-supplied path; 0640 is deliberate so a
+	// service account in the same group can read it (see the perms commit).
 	tmpFile, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
 	if err != nil {
 		return fmt.Errorf("open checkpoint temp file: %w", err)
@@ -85,6 +89,8 @@ func SaveCheckpoint(path string, cp Checkpoint) error {
 }
 
 func syncDirectory(path string) error {
+	// #nosec G304 -- opening the checkpoint's own directory to fsync it after
+	// an atomic rename; the path is derived from the configured checkpoint.
 	dir, err := os.Open(path)
 	if err != nil {
 		return err

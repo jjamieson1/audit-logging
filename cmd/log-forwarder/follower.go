@@ -227,6 +227,8 @@ func (f *Follower) closeCurrentFile() {
 }
 
 func openFileWithIdentity(path string) (*os.File, FileIdentity, int64, error) {
+	// #nosec G304 -- source_file is the log the operator configured this
+	// forwarder to tail. Reading it is the program's entire purpose.
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, FileIdentity{}, 0, fmt.Errorf("open source file: %w", err)
@@ -263,5 +265,8 @@ func fileIdentityFromInfo(info os.FileInfo) (FileIdentity, error) {
 	if !ok || stat == nil {
 		return FileIdentity{}, errors.New("file identity unavailable")
 	}
+	// #nosec G115 -- Dev and Ino are kernel-assigned identifiers used only for
+	// equality comparison to detect log rotation; the numeric value is never
+	// interpreted, so a sign reinterpretation cannot change behaviour.
 	return FileIdentity{Dev: uint64(stat.Dev), Inode: uint64(stat.Ino)}, nil
 }

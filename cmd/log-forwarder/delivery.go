@@ -66,6 +66,7 @@ func WriteDeadLetter(path string, payload auditclient.LogRequest, sourceFile str
 		return fmt.Errorf("marshal dead-letter entry: %w", err)
 	}
 
+	// #nosec G304,G302 -- operator-supplied dead_letter_path; 0640 is deliberate.
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o640)
 	if err != nil {
 		return fmt.Errorf("open dead-letter file: %w", err)

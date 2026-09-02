@@ -201,6 +201,9 @@ func randomJitter(max time.Duration) time.Duration {
 		return 0
 	}
 
+	// #nosec G404 -- retry jitter, not a security decision. Jitter only needs to
+	// decorrelate concurrent clients; a CSPRNG here would cost entropy for no
+	// benefit and nothing about the value is secret.
 	return time.Duration(rand.Int63n(int64(max) + 1))
 }
 
@@ -245,5 +248,6 @@ func randomDuration(min, max time.Duration) time.Duration {
 	}
 
 	delta := max - min
+	// #nosec G404 -- retry jitter, not a security decision. See randomJitter.
 	return min + time.Duration(rand.Int63n(int64(delta)+1))
 }
