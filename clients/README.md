@@ -101,6 +101,10 @@ Retry defaults (Node):
 
 ## Runnable producers
 
+Both need `AUDIT_TOKEN` exported first — see
+[../docs/authorization.md](../docs/authorization.md) for how to register a
+client and get one. Without it the write fails with the server's `401`.
+
 Go producer:
 
 ```bash
@@ -117,6 +121,7 @@ Environment variables for both producers:
 
 - `AUDIT_LOG_URL` (default: `http://localhost:8080/v1/logs`)
 - `AUDIT_APP_NAME` (default: language-specific producer name)
+- `AUDIT_TOKEN` (required; the registered client's bearer token)
 
 ## curl examples
 

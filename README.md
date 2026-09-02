@@ -144,6 +144,11 @@ make retry-sim-bursty
 make test-node
 ```
 
+`verify`, `sample-log`, and `smoke` call authenticated endpoints, so export
+`AUDIT_TOKEN` first (`health` alone needs no token). See
+[docs/authorization.md](docs/authorization.md) for how to register a client
+and get one.
+
 ## Deploy to a server
 
 Deployment to an Ubuntu 24.04 host lives in `deployment/`:
@@ -158,7 +163,7 @@ credential rotation.
 
 ## Producer Clients
 
-For producer client usage, reusable Go/Node client libraries, retry tuning options, and retry simulation presets, see `clients/README.md`.
+For producer client usage, reusable Go/Node client libraries, retry tuning options, and retry simulation presets, see `clients/README.md`. Every example needs `AUDIT_TOKEN` exported first — see [docs/authorization.md](docs/authorization.md).
 
 ## Log Forwarder Agent (M6)
 
