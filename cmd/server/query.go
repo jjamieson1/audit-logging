@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -129,6 +130,15 @@ func decodeCursor(raw string) (uint64, error) {
 
 	index, err := strconv.ParseUint(strings.TrimPrefix(payload, cursorVersion), 10, 64)
 	if err != nil {
+		return 0, fmt.Errorf("invalid cursor")
+	}
+
+	// entry_index is a Postgres BIGINT and the query binds the cursor as an
+	// int64. Anything above math.MaxInt64 wraps negative on that conversion,
+	// which turns "entry_index > cursor" into a predicate matching every row:
+	// the caller would silently get page one back rather than an error, and a
+	// paging loop would never terminate.
+	if index > math.MaxInt64 {
 		return 0, fmt.Errorf("invalid cursor")
 	}
 
