@@ -65,7 +65,7 @@ func StartIntegrityVerifier(ctx context.Context, logger *log.Logger, logsEndpoin
 				continue
 			}
 			body, readErr := io.ReadAll(res.Body)
-			res.Body.Close()
+			_ = res.Body.Close()
 			if readErr != nil {
 				logger.Printf("event=verify_read_failed err=%q", readErr)
 				continue

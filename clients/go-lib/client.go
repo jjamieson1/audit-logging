@@ -137,7 +137,7 @@ func (c *Client) WriteLog(ctx context.Context, payload LogRequest) (LogResponse,
 			lastErr = err
 		} else {
 			resBody, readErr := io.ReadAll(res.Body)
-			res.Body.Close()
+			_ = res.Body.Close()
 			if readErr != nil {
 				lastErr = readErr
 			} else if res.StatusCode >= 300 {
