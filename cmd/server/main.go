@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -732,108 +731,7 @@ func main() {
 		log.Fatalf("invalid STORAGE_BACKEND: %s", cfg.StorageBackend)
 	}
 
-	_ = clientStore // wired into the handlers in Task 5
-
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/v1/health", withMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	}))
-
-	mux.HandleFunc("/v1/logs", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			r.Body = http.MaxBytesReader(w, r.Body, cfg.MaxPayloadBytes)
-			defer r.Body.Close()
-
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "payload exceeds max size"})
-				return
-			}
-
-			var input LogRecord
-			if err := json.Unmarshal(body, &input); err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
-				return
-			}
-
-			// Attribution is server-assigned. Task 5 replaces this with the
-			// authenticated client; until then nobody gets to self-attribute.
-			input.ClientID = ""
-
-			input.App = strings.TrimSpace(input.App)
-			input.Level = strings.TrimSpace(input.Level)
-			input.Message = strings.TrimSpace(input.Message)
-			if input.App == "" || input.Level == "" || input.Message == "" {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "app, level, and message are required"})
-				return
-			}
-			if input.Metadata == nil {
-				input.Metadata = map[string]any{}
-			}
-
-			entry, err := store.Append(input)
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to append log entry"})
-				return
-			}
-
-			writeJSON(w, http.StatusCreated, map[string]any{
-				"index":     entry.Index,
-				"timestamp": entry.Timestamp,
-				"entryHash": entry.EntryHash,
-				"prevHash":  entry.PrevHash,
-			})
-		case http.MethodGet:
-			query, err := parseLogQuery(r, cfg.Query)
-			if err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-				return
-			}
-
-			result, err := store.QueryLogs(query)
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to query logs"})
-				return
-			}
-
-			writeJSON(w, http.StatusOK, result)
-		default:
-			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
-		}
-	})
-
-	mux.HandleFunc("/v1/logs/search", withMethod(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
-		query, err := parseLogQuery(r, cfg.Query)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
-		}
-
-		result, err := store.QueryLogs(query)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to query logs"})
-			return
-		}
-
-		writeJSON(w, http.StatusOK, result)
-	}))
-
-	mux.HandleFunc("/v1/verify", withMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
-		result, err := store.Verify()
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to verify chain"})
-			return
-		}
-
-		if result.Valid {
-			writeJSON(w, http.StatusOK, result)
-			return
-		}
-
-		writeJSON(w, http.StatusConflict, result)
-	}))
+	mux := newRouter(cfg, store, clientStore)
 
 	addr := cfg.ListenAddr()
 	log.Printf("audit-logging listening on %s", addr)

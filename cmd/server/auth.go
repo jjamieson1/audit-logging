@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"log"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -98,4 +101,58 @@ func parseToken(token string) (string, string, error) {
 
 func hashSecret(secret string) string {
 	return sha256Hex([]byte(secret))
+}
+
+// contextKey is unexported so no other package can collide with it.
+type contextKey struct{ name string }
+
+var principalContextKey = &contextKey{name: "principal"}
+
+// bearerToken pulls the credential out of an Authorization header. The scheme
+// is compared case-insensitively; the token itself is not.
+func bearerToken(r *http.Request) string {
+	header := strings.TrimSpace(r.Header.Get("authorization"))
+	const scheme = "bearer "
+	if len(header) <= len(scheme) || !strings.EqualFold(header[:len(scheme)], scheme) {
+		return ""
+	}
+	return strings.TrimSpace(header[len(scheme):])
+}
+
+func principalFrom(ctx context.Context) (Principal, bool) {
+	principal, ok := ctx.Value(principalContextKey).(Principal)
+	return principal, ok
+}
+
+func writeUnauthorized(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+}
+
+// requireAuth resolves the bearer token and puts the Principal in the request
+// context. Every credential problem produces an identical 401, so the endpoint
+// cannot be used to probe for valid client ids. A registry outage is a 503
+// instead: it says nothing about the token, and reporting it as 401 would send
+// operators hunting for a credential bug during a database incident.
+func requireAuth(clients ClientStore, handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := bearerToken(r)
+		if token == "" {
+			writeUnauthorized(w)
+			return
+		}
+
+		principal, err := clients.Authenticate(token)
+		if errors.Is(err, ErrUnauthorized) {
+			writeUnauthorized(w)
+			return
+		}
+		if err != nil {
+			log.Printf("client registry unavailable: %v", err)
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "authentication unavailable"})
+			return
+		}
+
+		handler(w, r.WithContext(context.WithValue(r.Context(), principalContextKey, principal)))
+	}
 }
