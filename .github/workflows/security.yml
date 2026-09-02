@@ -1,0 +1,47 @@
+name: Security
+
+# The pre-push hook is a local convenience and is bypassable with
+# --no-verify. This workflow is the enforcement point: make it a required
+# status check in branch protection and unscanned code cannot merge.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # Deliberately not go-version-file: go.mod. That declares the minimum
+          # language version (1.22), whereas govulncheck findings are almost
+          # always standard-library issues fixed by a newer TOOLCHAIN. Building
+          # with the current stable Go is what clears them.
+          go-version: stable
+          check-latest: true
+
+      - name: Install gating scanners
+        # Only govulncheck is needed for a gating check. gosec, semgrep,
+        # gitleaks and syft are non-gating; the scan records them as skipped
+        # when absent rather than failing, so CI stays fast and focused.
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run security scan
+        run: go run ./cmd/security-dashboard scan --trigger ci
+
+      - name: Upload dashboard and raw reports
+        # Runs even when the scan fails -- that is precisely when someone
+        # wants to read the report.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-dashboard
+          path: |
+            security/dashboard.html
+            security/badge.svg
+            security/runs/
+          retention-days: 30
