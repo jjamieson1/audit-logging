@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
 
 func TestNormalizeLogQueryAppliesLimits(t *testing.T) {
 	limits := QueryLimits{DefaultLimit: 25, MaxLimit: 100, MaxOffset: 1000}
@@ -16,6 +21,7 @@ func TestNormalizeLogQueryAppliesLimits(t *testing.T) {
 		{name: "negative limit takes the configured default", in: LogQuery{Limit: -5}, wantLimit: 25, wantOffset: 0},
 		{name: "limit under the ceiling is preserved", in: LogQuery{Limit: 40}, wantLimit: 40, wantOffset: 0},
 		{name: "limit over the ceiling is clamped not rejected", in: LogQuery{Limit: 5000}, wantLimit: 100, wantOffset: 0},
+		{name: "limit exactly at the ceiling is preserved", in: LogQuery{Limit: 100}, wantLimit: 100, wantOffset: 0},
 		{name: "negative offset floors at zero", in: LogQuery{Limit: 10, Offset: -3}, wantLimit: 10, wantOffset: 0},
 		{name: "offset under the ceiling is preserved", in: LogQuery{Limit: 10, Offset: 900}, wantLimit: 10, wantOffset: 900},
 	}
@@ -89,4 +95,61 @@ func TestLoadConfigReadsQueryLimits(t *testing.T) {
 	if got != want {
 		t.Fatalf("loadConfig().Query = %+v, want %+v", got, want)
 	}
+}
+
+func TestParseLogQueryOffsetCeiling(t *testing.T) {
+	limits := QueryLimits{DefaultLimit: 25, MaxLimit: 100, MaxOffset: 1000}
+
+	t.Run("offset exactly at the ceiling is accepted", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/v1/logs?offset=1000", nil)
+		got, err := parseLogQuery(r, limits)
+		if err != nil {
+			t.Fatalf("parseLogQuery() error = %v, want nil", err)
+		}
+		if got.Offset != 1000 {
+			t.Errorf("Offset = %d, want %d", got.Offset, 1000)
+		}
+	})
+
+	t.Run("offset one past the ceiling is rejected", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/v1/logs?offset=1001", nil)
+		_, err := parseLogQuery(r, limits)
+		if err == nil {
+			t.Fatal("parseLogQuery() error = nil, want an error")
+		}
+		if !strings.Contains(err.Error(), "cursor") {
+			t.Errorf("error = %q, want it to mention %q", err.Error(), "cursor")
+		}
+	})
+
+	t.Run("no limit parameter takes the configured default", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/v1/logs", nil)
+		got, err := parseLogQuery(r, limits)
+		if err != nil {
+			t.Fatalf("parseLogQuery() error = %v, want nil", err)
+		}
+		if got.Limit != limits.DefaultLimit {
+			t.Errorf("Limit = %d, want %d", got.Limit, limits.DefaultLimit)
+		}
+	})
+}
+
+func TestParseLogQueryRejectsMalformedNumbers(t *testing.T) {
+	limits := QueryLimits{DefaultLimit: 25, MaxLimit: 100, MaxOffset: 1000}
+
+	t.Run("non-numeric limit is rejected", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/v1/logs?limit=abc", nil)
+		_, err := parseLogQuery(r, limits)
+		if err == nil {
+			t.Fatal("parseLogQuery() error = nil, want an error")
+		}
+	})
+
+	t.Run("non-numeric offset is rejected", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/v1/logs?offset=abc", nil)
+		_, err := parseLogQuery(r, limits)
+		if err == nil {
+			t.Fatal("parseLogQuery() error = nil, want an error")
+		}
+	})
 }
