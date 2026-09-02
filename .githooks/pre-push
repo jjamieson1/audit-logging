@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# Blocks a push when a gating security check fails.
+#
+# Enable once per clone:  make hooks
+# (equivalently: git config core.hooksPath .githooks)
+#
+# Gating checks are the ones marked `"gating": true` in security/config.json --
+# currently compile, go vet, the test suite, and govulncheck. Non-gating checks
+# (gosec, semgrep, SBOM) still run and still appear on the dashboard, but they
+# warn rather than block.
+#
+# This hook is a fast local signal, NOT an enforcement boundary: anyone can
+# bypass it with `git push --no-verify`, and a hook cannot run on someone
+# else's machine. Server-side branch protection with a required CI check is
+# what actually prevents unscanned code landing on a protected branch.
+
+set -euo pipefail
+
+# Nothing to scan when the push only deletes refs.
+all_deletes=true
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    if [ "$local_sha" != "0000000000000000000000000000000000000000" ]; then
+        all_deletes=false
+    fi
+done
+if [ "$all_deletes" = true ]; then
+    exit 0
+fi
+
+echo "pre-push: running security scan (about 10s; --no-verify to skip)…"
+
+if go run ./cmd/security-dashboard scan --trigger pre-push; then
+    echo "pre-push: gating checks passed."
+    exit 0
+fi
+
+cat >&2 <<'MSG'
+
+pre-push: BLOCKED — a gating security check failed.
+
+  Details:   security/dashboard.html  (rendered from the run just recorded)
+  Raw output: security/runs/
+
+Fix the failure, or if you have decided to accept it deliberately, either
+downgrade the check to non-gating in security/config.json (which records the
+decision in the repo) or push with:
+
+  git push --no-verify
+
+Using --no-verify leaves no trace, so prefer changing the config when the
+call is intentional and lasting.
+MSG
+exit 1
