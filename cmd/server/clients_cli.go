@@ -21,6 +21,29 @@ Commands:
 
 DATABASE_URL must be set. The registry always lives in PostgreSQL.`
 
+// clientsHandler is the shape shared by every subcommand. clientsList takes
+// no flags of its own, so it is wrapped below to fit the same signature.
+type clientsHandler func(store ClientStore, args []string, out io.Writer) int
+
+// clientsHandlers is the single source of truth for which subcommands exist.
+// runClientsCLI dispatches from it and runClientsCommand validates against it
+// before touching the database, so a fifth subcommand added here cannot be
+// forgotten in the other.
+var clientsHandlers = map[string]clientsHandler{
+	"register": clientsRegister,
+	"list": func(store ClientStore, args []string, out io.Writer) int {
+		return clientsList(store, out)
+	},
+	"rotate": clientsRotate,
+	"revoke": clientsRevoke,
+}
+
+// isClientsCommand reports whether name is a known clients subcommand.
+func isClientsCommand(name string) bool {
+	_, ok := clientsHandlers[name]
+	return ok
+}
+
 // runClientsCLI executes an admin subcommand against a registry. It takes the
 // store and the output stream as arguments so it is testable without a
 // database. The return value is the process exit code.
@@ -30,19 +53,13 @@ func runClientsCLI(store ClientStore, args []string, out io.Writer) int {
 		return 2
 	}
 
-	switch args[0] {
-	case "register":
-		return clientsRegister(store, args[1:], out)
-	case "list":
-		return clientsList(store, out)
-	case "rotate":
-		return clientsRotate(store, args[1:], out)
-	case "revoke":
-		return clientsRevoke(store, args[1:], out)
-	default:
+	handler, ok := clientsHandlers[args[0]]
+	if !ok {
 		fmt.Fprintf(out, "unknown command %q\n\n%s\n", args[0], clientsUsage)
 		return 2
 	}
+
+	return handler(store, args[1:], out)
 }
 
 func clientsRegister(store ClientStore, args []string, out io.Writer) int {
@@ -51,6 +68,10 @@ func clientsRegister(store ClientStore, args []string, out io.Writer) int {
 	name := flags.String("name", "", "human-readable client name (required)")
 	role := flags.String("role", RoleClient, "client or admin")
 	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if strings.TrimSpace(*name) == "" {
+		fmt.Fprintln(out, "error: --name is required")
 		return 2
 	}
 
@@ -120,6 +141,7 @@ func clientsRotate(store ClientStore, args []string, out io.Writer) int {
 
 	fmt.Fprintf(out, "token: %s\n", token)
 	fmt.Fprintln(out)
+	fmt.Fprintln(out, "This token is not recoverable: only its hash is stored. Save it now.")
 	fmt.Fprintln(out, "The previous token stopped working the moment this one was issued.")
 	fmt.Fprintln(out, "Update the client's configuration and restart it now.")
 
@@ -150,8 +172,21 @@ func clientsRevoke(store ClientStore, args []string, out io.Writer) int {
 }
 
 // runClientsCommand wires the CLI to a real registry. It never starts a
-// listener.
+// listener. Usage errors (no subcommand, an unknown one) are detected
+// against clientsHandlers before loadConfig or any database call, so a
+// mistyped command reports exit 2 whether or not DATABASE_URL is set or the
+// database is reachable — the two are not the same failure and a deployment
+// script needs to tell them apart.
 func runClientsCommand(args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(os.Stdout, clientsUsage)
+		return 2
+	}
+	if !isClientsCommand(args[0]) {
+		fmt.Fprintf(os.Stdout, "unknown command %q\n\n%s\n", args[0], clientsUsage)
+		return 2
+	}
+
 	cfg := loadConfig()
 	if strings.TrimSpace(cfg.DatabaseURL) == "" {
 		fmt.Fprintln(os.Stderr, "error: DATABASE_URL is required")

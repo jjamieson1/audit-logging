@@ -137,19 +137,24 @@ func TestClientsRegisterRole(t *testing.T) {
 
 func TestClientsRegisterRejectsBadInput(t *testing.T) {
 	tests := []struct {
-		name string
-		args []string
+		name     string
+		args     []string
+		wantCode int
 	}{
-		{name: "missing name", args: []string{"register"}},
-		{name: "blank name", args: []string{"register", "--name", "   "}},
-		{name: "invalid role", args: []string{"register", "--name", "x", "--role", "root"}},
+		// A missing or blank --name is a usage error: the CLI never asked the
+		// store to do anything.
+		{name: "missing name", args: []string{"register"}, wantCode: 2},
+		{name: "blank name", args: []string{"register", "--name", "   "}, wantCode: 2},
+		// An invalid role reaches the store and is a genuine operation
+		// failure, not a usage error.
+		{name: "invalid role", args: []string{"register", "--name", "x", "--role", "root"}, wantCode: 1},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			output, code := runCLI(t, newMemoryClientStore(), tc.args...)
-			if code == 0 {
-				t.Fatalf("exit code = 0, want non-zero. output:\n%s", output)
+			if code != tc.wantCode {
+				t.Fatalf("exit code = %d, want %d. output:\n%s", code, tc.wantCode, output)
 			}
 			if strings.Contains(output, "alog_") {
 				t.Fatalf("a token was printed on a failed registration:\n%s", output)
@@ -213,6 +218,9 @@ func TestClientsRotate(t *testing.T) {
 	if !strings.Contains(output, "alog_"+clientID+"_rotated-"+clientID) {
 		t.Errorf("rotate did not print the new token:\n%s", output)
 	}
+	if !strings.Contains(strings.ToLower(output), "not recoverable") {
+		t.Errorf("output does not warn that the new token cannot be retrieved again:\n%s", output)
+	}
 }
 
 func TestClientsRevoke(t *testing.T) {
@@ -252,6 +260,38 @@ func TestClientsUsageErrors(t *testing.T) {
 			output, code := runCLI(t, newMemoryClientStore(), tc.args...)
 			if code == 0 {
 				t.Fatalf("exit code = 0, want non-zero. output:\n%s", output)
+			}
+		})
+	}
+}
+
+// TestRunClientsCommandUsageErrorsExitTwoWithoutTouchingTheDatabase covers
+// runClientsCommand directly, not just runClientsCLI. Before this test,
+// runClientsCommand had no coverage at all: it opened a database connection
+// before looking at args, so a missing or unknown subcommand surfaced
+// whatever loadConfig/db.Open/db.Ping produced (exit 1) instead of the usage
+// exit 2 that runClientsCLI already returns for the same input. Usage
+// errors must be indistinguishable from a database outage in exit code, in
+// either direction, or a deployment script cannot branch on them.
+func TestRunClientsCommandUsageErrorsExitTwoWithoutTouchingTheDatabase(t *testing.T) {
+	tests := []struct {
+		name        string
+		databaseURL string
+		args        []string
+	}{
+		{name: "no subcommand, DATABASE_URL unset", databaseURL: "", args: nil},
+		{name: "unknown subcommand, DATABASE_URL unset", databaseURL: "", args: []string{"bogus"}},
+		// A syntactically valid but unreachable DSN: if the usage check ran
+		// after connecting, db.Ping would fail here and this would return 1.
+		{name: "no subcommand, database unreachable", databaseURL: "postgres://audit:audit@127.0.0.1:1/audit?sslmode=disable", args: nil},
+		{name: "unknown subcommand, database unreachable", databaseURL: "postgres://audit:audit@127.0.0.1:1/audit?sslmode=disable", args: []string{"bogus"}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", tc.databaseURL)
+			if code := runClientsCommand(tc.args); code != 2 {
+				t.Fatalf("exit code = %d, want 2", code)
 			}
 		})
 	}
