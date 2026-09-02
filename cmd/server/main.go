@@ -32,6 +32,11 @@ type Config struct {
 }
 
 type LogRecord struct {
+	// ClientID is stamped by the server from the authenticated token. It lives
+	// inside the record so it is covered by payloadHash and the chain, making
+	// attribution tamper-evident. omitempty keeps pre-attribution entries
+	// hashing exactly as they did.
+	ClientID string         `json:"clientId,omitempty"`
 	App      string         `json:"app"`
 	Level    string         `json:"level"`
 	Message  string         `json:"message"`
@@ -746,6 +751,10 @@ func main() {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
 				return
 			}
+
+			// Attribution is server-assigned. Task 5 replaces this with the
+			// authenticated client; until then nobody gets to self-attribute.
+			input.ClientID = ""
 
 			input.App = strings.TrimSpace(input.App)
 			input.Level = strings.TrimSpace(input.Level)
