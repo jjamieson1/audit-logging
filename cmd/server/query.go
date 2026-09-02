@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -53,6 +54,20 @@ func normalizeLogQuery(query LogQuery, limits QueryLimits) LogQuery {
 func parseLogQuery(r *http.Request, limits QueryLimits) (LogQuery, error) {
 	values := r.URL.Query()
 
+	cursorRaw := strings.TrimSpace(values.Get("cursor"))
+	if cursorRaw != "" && strings.TrimSpace(values.Get("offset")) != "" {
+		return LogQuery{}, fmt.Errorf("cursor and offset cannot be combined")
+	}
+
+	var afterIndex uint64
+	if cursorRaw != "" {
+		decoded, err := decodeCursor(cursorRaw)
+		if err != nil {
+			return LogQuery{}, err
+		}
+		afterIndex = decoded
+	}
+
 	// 0 means "caller did not say"; normalizeLogQuery substitutes the default.
 	limit := 0
 	if raw := strings.TrimSpace(values.Get("limit")); raw != "" {
@@ -81,10 +96,41 @@ func parseLogQuery(r *http.Request, limits QueryLimits) (LogQuery, error) {
 	}
 
 	return normalizeLogQuery(LogQuery{
-		App:    values.Get("app"),
-		Level:  values.Get("level"),
-		Text:   text,
-		Limit:  limit,
-		Offset: offset,
+		App:        values.Get("app"),
+		Level:      values.Get("level"),
+		Text:       text,
+		Limit:      limit,
+		Offset:     offset,
+		AfterIndex: afterIndex,
+		WantTotal:  strings.EqualFold(strings.TrimSpace(values.Get("count")), "true"),
 	}, limits), nil
+}
+
+// cursorVersion prefixes the encoded payload so a future format change is
+// detectable rather than silently misparsed.
+const cursorVersion = "v1:"
+
+// encodeCursor renders a keyset position opaquely. Callers must treat the
+// result as a token, not as a number they can construct themselves.
+func encodeCursor(index uint64) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(cursorVersion + strconv.FormatUint(index, 10)))
+}
+
+func decodeCursor(raw string) (uint64, error) {
+	decoded, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, fmt.Errorf("invalid cursor")
+	}
+
+	payload := string(decoded)
+	if !strings.HasPrefix(payload, cursorVersion) {
+		return 0, fmt.Errorf("invalid cursor")
+	}
+
+	index, err := strconv.ParseUint(strings.TrimPrefix(payload, cursorVersion), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid cursor")
+	}
+
+	return index, nil
 }

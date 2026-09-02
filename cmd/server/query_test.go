@@ -134,6 +134,94 @@ func TestParseLogQueryOffsetCeiling(t *testing.T) {
 	})
 }
 
+func TestCursorRoundTrip(t *testing.T) {
+	for _, index := range []uint64{1, 2, 50, 1427, 18446744073709551615} {
+		encoded := encodeCursor(index)
+		decoded, err := decodeCursor(encoded)
+		if err != nil {
+			t.Fatalf("decodeCursor(%q) returned error: %v", encoded, err)
+		}
+		if decoded != index {
+			t.Fatalf("round trip gave %d, want %d", decoded, index)
+		}
+	}
+}
+
+func TestEncodeCursorIsOpaqueAndStable(t *testing.T) {
+	// Locked in so a future format change is a deliberate, visible edit.
+	if got, want := encodeCursor(1427), "djE6MTQyNw"; got != want {
+		t.Fatalf("encodeCursor(1427) = %q, want %q", got, want)
+	}
+}
+
+func TestDecodeCursorRejectsBadInput(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+	}{
+		{name: "empty", in: ""},
+		{name: "not base64", in: "!!!!"},
+		{name: "base64 but missing version prefix", in: "MTQyNw"},
+		{name: "wrong version prefix", in: "djI6MTQyNw"},
+		{name: "version prefix but non-numeric", in: "djE6YWJj"},
+		{name: "negative index", in: "djE6LTE"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := decodeCursor(tc.in); err == nil {
+				t.Fatalf("decodeCursor(%q) succeeded, want error", tc.in)
+			}
+		})
+	}
+}
+
+func TestParseLogQueryPagination(t *testing.T) {
+	limits := QueryLimits{DefaultLimit: 50, MaxLimit: 500, MaxOffset: 100}
+
+	tests := []struct {
+		name           string
+		rawQuery       string
+		wantErr        bool
+		wantAfterIndex uint64
+		wantTotal      bool
+		wantLimit      int
+	}{
+		{name: "cursor decodes to an index", rawQuery: "cursor=" + encodeCursor(42), wantAfterIndex: 42, wantLimit: 50},
+		{name: "count=true opts into the total", rawQuery: "count=true", wantTotal: true, wantLimit: 50},
+		{name: "count=TRUE is accepted", rawQuery: "count=TRUE", wantTotal: true, wantLimit: 50},
+		{name: "count=false does not opt in", rawQuery: "count=false", wantTotal: false, wantLimit: 50},
+		{name: "cursor with offset is rejected", rawQuery: "cursor=" + encodeCursor(1) + "&offset=10", wantErr: true},
+		{name: "malformed cursor is rejected", rawQuery: "cursor=not-a-cursor", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/v1/logs?"+tc.rawQuery, nil)
+			got, err := parseLogQuery(req, limits)
+
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("parseLogQuery() succeeded, want error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseLogQuery() error: %v", err)
+			}
+			if got.AfterIndex != tc.wantAfterIndex {
+				t.Errorf("AfterIndex = %d, want %d", got.AfterIndex, tc.wantAfterIndex)
+			}
+			if got.WantTotal != tc.wantTotal {
+				t.Errorf("WantTotal = %v, want %v", got.WantTotal, tc.wantTotal)
+			}
+			if got.Limit != tc.wantLimit {
+				t.Errorf("Limit = %d, want %d", got.Limit, tc.wantLimit)
+			}
+		})
+	}
+}
+
 func TestParseLogQueryRejectsMalformedNumbers(t *testing.T) {
 	limits := QueryLimits{DefaultLimit: 25, MaxLimit: 100, MaxOffset: 1000}
 

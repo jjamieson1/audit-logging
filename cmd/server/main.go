@@ -61,13 +61,24 @@ type LogQuery struct {
 	Text   string
 	Limit  int
 	Offset int
+	// AfterIndex is the keyset position. Zero means no cursor was supplied;
+	// entry indexes start at 1, so zero is unambiguous.
+	AfterIndex uint64
+	// WantTotal opts in to the exact count, which costs a full scan of the
+	// matching set. Off by default.
+	WantTotal bool
 }
 
 type LogQueryResult struct {
-	Items  []Entry `json:"items"`
-	Total  int     `json:"total"`
-	Limit  int     `json:"limit"`
-	Offset int     `json:"offset"`
+	Items []Entry `json:"items"`
+	Limit int     `json:"limit"`
+	// NextCursor is always serialised; null means this was the last page.
+	NextCursor *string `json:"nextCursor"`
+	// Total and Offset are pointers so an absent value serialises as absent.
+	// A plain int would emit "total": 0 on every uncounted response, which
+	// reads as an empty result set.
+	Total  *int `json:"total,omitempty"`
+	Offset *int `json:"offset,omitempty"`
 }
 
 type Store interface {
@@ -215,6 +226,7 @@ func (s *FileStore) Verify() (VerifyResult, error) {
 	return s.verifyChainUnsafe()
 }
 
+// QueryLogs assumes query.Limit is positive; parseLogQuery guarantees it.
 func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -229,7 +241,9 @@ func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	items := make([]Entry, 0, query.Limit)
-	matched := 0
+	total := 0
+	skipped := 0
+	hasMore := false
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -246,22 +260,49 @@ func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 			continue
 		}
 
-		if matched >= query.Offset && len(items) < query.Limit {
-			items = append(items, entry)
+		// Counted before the cursor is applied: Total is the size of the
+		// matching set, not of what remains after the cursor.
+		total++
+
+		if entry.Index <= query.AfterIndex {
+			continue
 		}
-		matched++
+		if skipped < query.Offset {
+			skipped++
+			continue
+		}
+
+		if len(items) < query.Limit {
+			items = append(items, entry)
+			continue
+		}
+
+		// One past a full page proves there is a next page. Without a total to
+		// finish, there is nothing left to learn from the rest of the file.
+		hasMore = true
+		if !query.WantTotal {
+			break
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return LogQueryResult{}, err
 	}
 
-	return LogQueryResult{
-		Items:  items,
-		Total:  matched,
-		Limit:  query.Limit,
-		Offset: query.Offset,
-	}, nil
+	result := LogQueryResult{Items: items, Limit: query.Limit}
+	if query.WantTotal {
+		result.Total = &total
+	}
+	if query.Offset > 0 {
+		offset := query.Offset
+		result.Offset = &offset
+	}
+	if hasMore && len(items) > 0 {
+		cursor := encodeCursor(items[len(items)-1].Index)
+		result.NextCursor = &cursor
+	}
+
+	return result, nil
 }
 
 func (s *FileStore) verifyChainUnsafe() (VerifyResult, error) {
@@ -503,40 +544,67 @@ ORDER BY entry_index ASC
 	return VerifyResult{Valid: true, TotalEntries: total, LastHash: previousHash}, nil
 }
 
+// QueryLogs assumes query.Limit is positive; parseLogQuery guarantees it.
 func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
-	clauses := make([]string, 0)
-	args := make([]any, 0)
+	filters := make([]string, 0, 3)
+	filterArgs := make([]any, 0, 4)
 
 	if query.App != "" {
-		args = append(args, query.App)
-		clauses = append(clauses, fmt.Sprintf("record_json::jsonb->>'app' = $%d", len(args)))
+		filterArgs = append(filterArgs, query.App)
+		filters = append(filters, fmt.Sprintf("record_json::jsonb->>'app' = $%d", len(filterArgs)))
 	}
 	if query.Level != "" {
-		args = append(args, query.Level)
-		clauses = append(clauses, fmt.Sprintf("record_json::jsonb->>'level' = $%d", len(args)))
+		filterArgs = append(filterArgs, query.Level)
+		filters = append(filters, fmt.Sprintf("record_json::jsonb->>'level' = $%d", len(filterArgs)))
 	}
 	if query.Text != "" {
-		args = append(args, "%"+query.Text+"%")
-		placeholder := fmt.Sprintf("$%d", len(args))
-		clauses = append(clauses, "(record_json::jsonb->>'message' ILIKE "+placeholder+" OR record_json ILIKE "+placeholder+")")
+		filterArgs = append(filterArgs, "%"+query.Text+"%")
+		placeholder := fmt.Sprintf("$%d", len(filterArgs))
+		filters = append(filters, "(record_json::jsonb->>'message' ILIKE "+placeholder+" OR record_json ILIKE "+placeholder+")")
 	}
 
-	where := ""
-	if len(clauses) > 0 {
-		where = " WHERE " + strings.Join(clauses, " AND ")
+	filterWhere := ""
+	if len(filters) > 0 {
+		filterWhere = " WHERE " + strings.Join(filters, " AND ")
 	}
 
-	countQuery := "SELECT COUNT(*) FROM audit_log_entries" + where
-	var total int
-	if err := s.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
-		return LogQueryResult{}, err
+	result := LogQueryResult{Limit: query.Limit}
+
+	// Opt-in only: this scans every matching row.
+	if query.WantTotal {
+		var total int
+		if err := s.db.QueryRow("SELECT COUNT(*) FROM audit_log_entries"+filterWhere, filterArgs...).Scan(&total); err != nil {
+			return LogQueryResult{}, err
+		}
+		result.Total = &total
 	}
 
-	args = append(args, query.Limit, query.Offset)
+	listArgs := append([]any{}, filterArgs...)
+	listWhere := filterWhere
+	if query.AfterIndex > 0 {
+		listArgs = append(listArgs, int64(query.AfterIndex))
+		clause := fmt.Sprintf("entry_index > $%d", len(listArgs))
+		if listWhere == "" {
+			listWhere = " WHERE " + clause
+		} else {
+			listWhere += " AND " + clause
+		}
+	}
+
+	// One extra row answers "is there another page" without a second query.
+	listArgs = append(listArgs, query.Limit+1)
+	limitClause := fmt.Sprintf(" LIMIT $%d", len(listArgs))
+
+	offsetClause := ""
+	if query.Offset > 0 {
+		listArgs = append(listArgs, query.Offset)
+		offsetClause = fmt.Sprintf(" OFFSET $%d", len(listArgs))
+	}
+
 	listQuery := "SELECT entry_index, ts, prev_hash, payload_hash, entry_hash, record_json FROM audit_log_entries" +
-		where + fmt.Sprintf(" ORDER BY entry_index ASC LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+		listWhere + " ORDER BY entry_index ASC" + limitClause + offsetClause
 
-	rows, err := s.db.Query(listQuery, args...)
+	rows, err := s.db.Query(listQuery, listArgs...)
 	if err != nil {
 		return LogQueryResult{}, err
 	}
@@ -569,12 +637,19 @@ func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 		return LogQueryResult{}, err
 	}
 
-	return LogQueryResult{
-		Items:  items,
-		Total:  total,
-		Limit:  query.Limit,
-		Offset: query.Offset,
-	}, nil
+	if len(items) > query.Limit {
+		items = items[:query.Limit]
+		cursor := encodeCursor(items[len(items)-1].Index)
+		result.NextCursor = &cursor
+	}
+
+	result.Items = items
+	if query.Offset > 0 {
+		offset := query.Offset
+		result.Offset = &offset
+	}
+
+	return result, nil
 }
 
 func sha256Hex(input []byte) string {
