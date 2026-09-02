@@ -60,11 +60,15 @@ type VerifyResult struct {
 }
 
 type LogQuery struct {
-	App    string
-	Level  string
-	Text   string
-	Limit  int
-	Offset int
+	// ClientID confines the result to one client. The handlers set it from the
+	// authenticated principal; it is never taken from caller input except for
+	// an admin.
+	ClientID string
+	App      string
+	Level    string
+	Text     string
+	Limit    int
+	Offset   int
 	// AfterIndex is the keyset position. Zero means no cursor was supplied;
 	// entry indexes start at 1, so zero is unambiguous.
 	AfterIndex uint64
@@ -411,6 +415,8 @@ CREATE TABLE IF NOT EXISTS audit_log_entries (
     record_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_audit_log_entries_index ON audit_log_entries(entry_index);
+CREATE INDEX IF NOT EXISTS idx_audit_log_entries_client_index
+    ON audit_log_entries ((record_json::jsonb->>'clientId'), entry_index);
 `
 	_, err := s.db.Exec(query)
 	return err
@@ -537,9 +543,13 @@ ORDER BY entry_index ASC
 
 // QueryLogs assumes query.Limit is positive; parseLogQuery guarantees it.
 func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
-	filters := make([]string, 0, 3)
-	filterArgs := make([]any, 0, 4)
+	filters := make([]string, 0, 4)
+	filterArgs := make([]any, 0, 5)
 
+	if query.ClientID != "" {
+		filterArgs = append(filterArgs, query.ClientID)
+		filters = append(filters, fmt.Sprintf("record_json::jsonb->>'clientId' = $%d", len(filterArgs)))
+	}
 	if query.App != "" {
 		filterArgs = append(filterArgs, query.App)
 		filters = append(filters, fmt.Sprintf("record_json::jsonb->>'app' = $%d", len(filterArgs)))
@@ -649,6 +659,12 @@ func sha256Hex(input []byte) string {
 }
 
 func matchesQuery(entry Entry, query LogQuery) bool {
+	// Exact comparison, unlike app and level: client ids are generated
+	// identifiers, and a case-insensitive match on a security boundary is a
+	// bug waiting to happen.
+	if query.ClientID != "" && entry.Record.ClientID != query.ClientID {
+		return false
+	}
 	if query.App != "" && !strings.EqualFold(entry.Record.App, query.App) {
 		return false
 	}

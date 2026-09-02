@@ -70,9 +70,17 @@ func handleWriteLog(w http.ResponseWriter, r *http.Request, cfg Config, store St
 		return
 	}
 
-	// Attribution is server-assigned. Task 6 stamps the authenticated client;
-	// until then nobody gets to self-attribute.
-	input.ClientID = ""
+	principal, ok := principalFrom(r.Context())
+	if !ok {
+		// Unreachable behind requireAuth; a 500 here means the route was wired
+		// without the middleware.
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "missing principal"})
+		return
+	}
+
+	// Assigned from the token, overwriting whatever the caller sent, so
+	// attribution cannot be forged.
+	input.ClientID = principal.ClientID
 
 	input.App = strings.TrimSpace(input.App)
 	input.Level = strings.TrimSpace(input.Level)
@@ -105,6 +113,13 @@ func handleReadLogs(w http.ResponseWriter, r *http.Request, cfg Config, store St
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
+
+	principal, ok := principalFrom(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "missing principal"})
+		return
+	}
+	query = scopeQuery(query, principal, r)
 
 	result, err := store.QueryLogs(query)
 	if err != nil {

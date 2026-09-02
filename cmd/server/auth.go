@@ -124,6 +124,22 @@ func principalFrom(ctx context.Context) (Principal, bool) {
 	return principal, ok
 }
 
+// scopeQuery confines a read to the caller. A non-admin is pinned to its own
+// client id and the clientId parameter is ignored — ignored rather than
+// rejected, so a caller cannot use the error to discover which ids exist.
+//
+// An admin with no clientId parameter sees everything, including the
+// unattributed entries written before authorization existed.
+func scopeQuery(query LogQuery, principal Principal, r *http.Request) LogQuery {
+	if principal.IsAdmin() {
+		query.ClientID = strings.TrimSpace(r.URL.Query().Get("clientId"))
+		return query
+	}
+
+	query.ClientID = principal.ClientID
+	return query
+}
+
 func writeUnauthorized(w http.ResponseWriter) {
 	w.Header().Set("WWW-Authenticate", "Bearer")
 	writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})

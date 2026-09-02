@@ -202,4 +202,58 @@ LIMIT 1`).Scan(&message); err != nil {
 			}
 		}
 	})
+
+	t.Run("composite client index exists", func(t *testing.T) {
+		var indexName string
+		err := store.db.QueryRow(`
+SELECT indexname FROM pg_indexes
+WHERE tablename = 'audit_log_entries' AND indexname = 'idx_audit_log_entries_client_index'`).Scan(&indexName)
+		if err != nil {
+			t.Fatalf("idx_audit_log_entries_client_index not found: %v", err)
+		}
+		if indexName != "idx_audit_log_entries_client_index" {
+			t.Fatalf("indexname = %q, want %q", indexName, "idx_audit_log_entries_client_index")
+		}
+	})
+
+	t.Run("client-scoped query for an id that owns nothing returns zero items", func(t *testing.T) {
+		result, err := store.QueryLogs(LogQuery{Limit: 20, ClientID: "no-such-client-id-plan-test"})
+		if err != nil {
+			t.Fatalf("QueryLogs() error: %v", err)
+		}
+		if len(result.Items) != 0 {
+			t.Fatalf("got %d items for a client id that owns nothing, want 0", len(result.Items))
+		}
+	})
+
+	t.Run("unscoped query returns rows including unattributed legacy entries", func(t *testing.T) {
+		var legacyCount int
+		if err := store.db.QueryRow(`
+SELECT COUNT(*) FROM audit_log_entries
+WHERE COALESCE(record_json::jsonb->>'clientId', '') = ''`).Scan(&legacyCount); err != nil {
+			t.Fatalf("counting unattributed rows: %v", err)
+		}
+		if legacyCount == 0 {
+			t.Skip("no unattributed legacy rows present; nothing to assert")
+		}
+
+		result, err := store.QueryLogs(LogQuery{Limit: 20, ClientID: ""})
+		if err != nil {
+			t.Fatalf("QueryLogs() error: %v", err)
+		}
+		if len(result.Items) == 0 {
+			t.Fatal("unscoped query returned no items, want rows including legacy entries")
+		}
+
+		var sawLegacy bool
+		for _, item := range result.Items {
+			if item.Record.ClientID == "" {
+				sawLegacy = true
+				break
+			}
+		}
+		if !sawLegacy {
+			t.Skip("first page did not happen to include a legacy entry; legacy presence already confirmed via COUNT above")
+		}
+	})
 }

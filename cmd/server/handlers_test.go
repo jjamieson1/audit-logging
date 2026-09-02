@@ -228,3 +228,184 @@ func TestRegistryOutageIsNotReportedAsUnauthorized(t *testing.T) {
 		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusServiceUnavailable)
 	}
 }
+
+// seedTwoClientsAndLegacy writes entries for alpha, for beta, and one
+// unattributed entry of the kind that existed before authorization.
+func seedTwoClientsAndLegacy(t *testing.T, store *FileStore) {
+	t.Helper()
+
+	records := []LogRecord{
+		{App: "legacy-app", Level: "INFO", Message: "written before auth existed"},
+		{ClientID: clientAlpha, App: "payments", Level: "INFO", Message: "alpha one"},
+		{ClientID: clientBeta, App: "billing", Level: "ERROR", Message: "beta one"},
+		{ClientID: clientAlpha, App: "payments", Level: "ERROR", Message: "alpha two"},
+		{ClientID: clientBeta, App: "billing", Level: "INFO", Message: "beta two"},
+	}
+
+	for _, record := range records {
+		if _, err := store.Append(record); err != nil {
+			t.Fatalf("Append() error: %v", err)
+		}
+	}
+}
+
+func TestWriteStampsTheAuthenticatedClient(t *testing.T) {
+	server, store, _ := newTestServer(t)
+
+	resp := do(t, server, http.MethodPost, "/v1/logs", tokenAlpha, `{"app":"payments","level":"INFO","message":"stamped"}`)
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusCreated)
+	}
+
+	result, err := store.QueryLogs(LogQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("QueryLogs() error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("stored %d entries, want 1", len(result.Items))
+	}
+	if got := result.Items[0].Record.ClientID; got != clientAlpha {
+		t.Fatalf("stored clientId = %q, want %q", got, clientAlpha)
+	}
+}
+
+func TestWriteOverwritesCallerSuppliedClientID(t *testing.T) {
+	server, store, _ := newTestServer(t)
+
+	// Alpha's token, but the body claims to be beta.
+	body := `{"clientId":"` + clientBeta + `","app":"payments","level":"INFO","message":"forged"}`
+	resp := do(t, server, http.MethodPost, "/v1/logs", tokenAlpha, body)
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusCreated)
+	}
+
+	result, err := store.QueryLogs(LogQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("QueryLogs() error: %v", err)
+	}
+	if got := result.Items[0].Record.ClientID; got != clientAlpha {
+		t.Fatalf("stored clientId = %q, want %q — attribution was forgeable", got, clientAlpha)
+	}
+}
+
+func TestReadsAreScopedToTheCallersClient(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	resp := do(t, server, http.MethodGet, "/v1/logs?limit=50", tokenAlpha, "")
+	result := decodeResult(t, resp)
+
+	if len(result.Items) != 2 {
+		t.Fatalf("alpha saw %d entries, want 2", len(result.Items))
+	}
+	for _, item := range result.Items {
+		if item.Record.ClientID != clientAlpha {
+			t.Fatalf("alpha saw an entry belonging to %q", item.Record.ClientID)
+		}
+	}
+}
+
+func TestSearchIsScopedToTheCallersClient(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	// "one" matches both "alpha one" and "beta one".
+	resp := do(t, server, http.MethodGet, "/v1/logs/search?q=one&limit=50", tokenAlpha, "")
+	result := decodeResult(t, resp)
+
+	if len(result.Items) != 1 {
+		t.Fatalf("search returned %d entries, want 1", len(result.Items))
+	}
+	if result.Items[0].Record.ClientID != clientAlpha {
+		t.Fatal("free-text search reached across clients")
+	}
+}
+
+func TestNonAdminCannotWidenScopeWithClientIDParam(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	// Alpha asks for beta's entries. The parameter is ignored, not honoured,
+	// and not an error.
+	resp := do(t, server, http.MethodGet, "/v1/logs?limit=50&clientId="+clientBeta, tokenAlpha, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	result := decodeResult(t, resp)
+	if len(result.Items) != 2 {
+		t.Fatalf("returned %d entries, want alpha's 2", len(result.Items))
+	}
+	for _, item := range result.Items {
+		if item.Record.ClientID != clientAlpha {
+			t.Fatalf("clientId parameter widened scope to %q", item.Record.ClientID)
+		}
+	}
+}
+
+func TestAdminReadsEverythingIncludingLegacyEntries(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	resp := do(t, server, http.MethodGet, "/v1/logs?limit=50", tokenAdmin, "")
+	result := decodeResult(t, resp)
+
+	if len(result.Items) != 5 {
+		t.Fatalf("admin saw %d entries, want all 5", len(result.Items))
+	}
+
+	var legacy int
+	for _, item := range result.Items {
+		if item.Record.ClientID == "" {
+			legacy++
+		}
+	}
+	if legacy != 1 {
+		t.Fatalf("admin saw %d unattributed entries, want 1", legacy)
+	}
+}
+
+func TestAdminCanScopeToOneClient(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	resp := do(t, server, http.MethodGet, "/v1/logs?limit=50&clientId="+clientBeta, tokenAdmin, "")
+	result := decodeResult(t, resp)
+
+	if len(result.Items) != 2 {
+		t.Fatalf("admin scoped read returned %d entries, want 2", len(result.Items))
+	}
+	for _, item := range result.Items {
+		if item.Record.ClientID != clientBeta {
+			t.Fatalf("scoped read returned an entry for %q", item.Record.ClientID)
+		}
+	}
+}
+
+func TestScopedPaginationDoesNotLeakAcrossClients(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	// A page size of 1 forces a cursor walk through interleaved owners.
+	seen := 0
+	path := "/v1/logs?limit=1"
+	for page := 0; page < 10; page++ {
+		resp := do(t, server, http.MethodGet, path, tokenBeta, "")
+		result := decodeResult(t, resp)
+
+		for _, item := range result.Items {
+			if item.Record.ClientID != clientBeta {
+				t.Fatalf("page %d leaked an entry belonging to %q", page, item.Record.ClientID)
+			}
+			seen++
+		}
+		if result.NextCursor == nil {
+			break
+		}
+		path = "/v1/logs?limit=1&cursor=" + *result.NextCursor
+	}
+
+	if seen != 2 {
+		t.Fatalf("cursor walk saw %d of beta's entries, want 2", seen)
+	}
+}
