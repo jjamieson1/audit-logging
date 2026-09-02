@@ -1,5 +1,24 @@
 # Reading and paging the log
 
+## Two endpoints, one contract
+
+Reads are served by two paths:
+
+| Path | Use |
+| --- | --- |
+| `GET /v1/logs` | Listing and filtering. |
+| `GET /v1/logs/search` | Free-text search. |
+
+**They are the same handler.** Both accept every parameter below — `limit`,
+`cursor`, `count`, `offset`, `app`, `level`, `q`/`text`, and `clientId` for an
+admin — return the identical response shape, and are scoped to your client the
+same way. `/v1/logs/search` is not a separate or reduced API, and it is not
+deprecated.
+
+Which you use is a matter of taste: `q` works on `/v1/logs` too, so a client
+may send everything to `/v1/logs`, or switch to `/v1/logs/search` when a search
+box is non-empty. Both are supported and neither is going away.
+
 ## Page size
 
 Every read is bounded. If you do not pass `limit`, the server applies its
@@ -113,7 +132,7 @@ of a UI if you need a count; do not ask for it on every page of a bulk export.
 | --- | --- |
 | `app` | Exact match on the app label. |
 | `level` | Exact match on the level. |
-| `q` or `text` | Free-text search across message and metadata. |
+| `q` or `text` | Free-text search across message and metadata. Works on `/v1/logs` and on `/v1/logs/search` identically. |
 | `clientId` | **Admin only.** Narrows to one client. Ignored for everyone else. |
 
 Filters combine with `AND`, and always apply within what you are allowed to see.
