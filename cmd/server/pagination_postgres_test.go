@@ -1,9 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"os"
 	"strings"
 	"testing"
+
+	_ "github.com/lib/pq"
 )
 
 // TestPostgresStoreQueryLogs exercises PostgresStore.QueryLogs against a
@@ -21,7 +24,16 @@ func TestPostgresStoreQueryLogs(t *testing.T) {
 		t.Skip("TEST_DATABASE_URL not set; skipping PostgresStore tests")
 	}
 
-	store, err := NewPostgresStore(dsn)
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("sql.Open() error: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+	if err := db.Ping(); err != nil {
+		t.Fatalf("Ping() error: %v", err)
+	}
+
+	store, err := NewPostgresStore(db)
 	if err != nil {
 		t.Fatalf("NewPostgresStore() error: %v", err)
 	}

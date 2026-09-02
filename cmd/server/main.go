@@ -380,34 +380,21 @@ func (s *FileStore) verifyChainUnsafe() (VerifyResult, error) {
 	return VerifyResult{Valid: true, TotalEntries: total, LastHash: previousHash}, nil
 }
 
-func NewPostgresStore(databaseURL string) (*PostgresStore, error) {
-	if strings.TrimSpace(databaseURL) == "" {
-		return nil, errors.New("DATABASE_URL is required for postgres backend")
-	}
-
-	db, err := sql.Open("postgres", databaseURL)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := db.Ping(); err != nil {
-		_ = db.Close()
-		return nil, err
+func NewPostgresStore(db *sql.DB) (*PostgresStore, error) {
+	if db == nil {
+		return nil, errors.New("a database handle is required for the postgres backend")
 	}
 
 	store := &PostgresStore{db: db}
 	if err := store.ensureSchema(); err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 
 	verify, err := store.Verify()
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 	if !verify.Valid {
-		_ = db.Close()
 		return nil, fmt.Errorf("invalid chain at index %d", derefUint64(verify.InvalidAt))
 	}
 
@@ -705,14 +692,31 @@ func withMethod(method string, handler http.HandlerFunc) http.HandlerFunc {
 func main() {
 	cfg := loadConfig()
 
-	var (
-		store Store
-		err   error
-	)
+	// The client registry always lives in PostgreSQL, so a database is
+	// required even when log entries go to a file.
+	if strings.TrimSpace(cfg.DatabaseURL) == "" {
+		log.Fatal("DATABASE_URL is required: the client registry is always stored in PostgreSQL, whatever STORAGE_BACKEND is set to")
+	}
 
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("failed to reach database: %v", err)
+	}
+
+	clientStore, err := NewPostgresClientStore(db)
+	if err != nil {
+		log.Fatalf("failed to initialize client registry: %v", err)
+	}
+
+	var store Store
 	switch cfg.StorageBackend {
 	case "postgres":
-		store, err = NewPostgresStore(cfg.DatabaseURL)
+		store, err = NewPostgresStore(db)
 		if err != nil {
 			log.Fatalf("failed to initialize postgres store: %v", err)
 		}
@@ -727,6 +731,8 @@ func main() {
 	default:
 		log.Fatalf("invalid STORAGE_BACKEND: %s", cfg.StorageBackend)
 	}
+
+	_ = clientStore // wired into the handlers in Task 5
 
 	mux := http.NewServeMux()
 
