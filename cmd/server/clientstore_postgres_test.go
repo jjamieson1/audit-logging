@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -214,5 +215,67 @@ func TestPostgresClientStoreListOmitsSecrets(t *testing.T) {
 	}
 	if strings.Contains(found.Name, secret) || strings.Contains(found.ClientID, secret) {
 		t.Error("List() leaked the token secret")
+	}
+}
+
+// TestPostgresClientStoreAuthenticateFailuresAreIndistinguishable asserts
+// that an unknown client id, a revoked client, and a real client presented
+// with the wrong secret all fail the same way: an error that satisfies
+// errors.Is(err, ErrUnauthorized). This is a value-level assertion, not a
+// timing assertion -- wall-clock comparisons are flaky under a test runner
+// and on a loaded machine, so the actual latency-equalizing behaviour in
+// Authenticate is verified by inspection instead (see the comments there).
+func TestPostgresClientStoreAuthenticateFailuresAreIndistinguishable(t *testing.T) {
+	store := newTestClientStore(t)
+
+	clientID, _, err := store.Register(testClientNamePrefix+"timing-active", RoleClient)
+	if err != nil {
+		t.Fatalf("Register() error: %v", err)
+	}
+
+	revokedID, revokedToken, err := store.Register(testClientNamePrefix+"timing-revoked", RoleClient)
+	if err != nil {
+		t.Fatalf("Register() error: %v", err)
+	}
+	if err := store.Revoke(revokedID); err != nil {
+		t.Fatalf("Revoke() error: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		in   string
+	}{
+		{name: "unknown client id", in: formatToken("ffffffffffffffff", "whatever")},
+		{name: "revoked client", in: revokedToken},
+		{name: "known client wrong secret", in: formatToken(clientID, "definitely-not-the-secret")},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := store.Authenticate(tc.in)
+			if err == nil {
+				t.Fatal("Authenticate() succeeded, want failure")
+			}
+			if !errors.Is(err, ErrUnauthorized) {
+				t.Fatalf("error = %v, want it to satisfy errors.Is(err, ErrUnauthorized)", err)
+			}
+		})
+	}
+}
+
+func TestPrincipalIsAdminTrueForAnAdminClient(t *testing.T) {
+	store := newTestClientStore(t)
+
+	_, token, err := store.Register(testClientNamePrefix+"admin", RoleAdmin)
+	if err != nil {
+		t.Fatalf("Register() error: %v", err)
+	}
+
+	principal, err := store.Authenticate(token)
+	if err != nil {
+		t.Fatalf("Authenticate() error: %v", err)
+	}
+	if !principal.IsAdmin() {
+		t.Error("IsAdmin() = false for an admin-role principal, want true")
 	}
 }

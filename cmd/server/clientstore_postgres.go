@@ -12,6 +12,15 @@ type PostgresClientStore struct {
 	db *sql.DB
 }
 
+// dummyTokenHash stands in for a stored hash when no row was found, so
+// Authenticate always performs a comparison of the same shape. It must be
+// exactly 64 lowercase hex characters -- the width of a hex-encoded SHA-256
+// digest, which is what hashSecret produces and what token_hash stores --
+// because subtle.ConstantTimeCompare returns 0 immediately when its two
+// arguments differ in length. A mismatched width would silently reintroduce
+// the timing asymmetry this constant exists to remove.
+const dummyTokenHash = "0000000000000000000000000000000000000000000000000000000000000000"
+
 func NewPostgresClientStore(db *sql.DB) (*PostgresClientStore, error) {
 	if db == nil {
 		return nil, errors.New("a database handle is required for the client registry")
@@ -51,17 +60,31 @@ func (s *PostgresClientStore) Authenticate(token string) (Principal, error) {
 SELECT name, role, token_hash, revoked_at FROM audit_clients WHERE client_id = $1
 `, clientID).Scan(&name, &role, &storedHash, &revokedAt)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return Principal{}, ErrUnauthorized
-	}
-	if err != nil {
+	// A genuine database error (anything but "no rows") is left
+	// distinguishable on purpose: it is an operational failure, not a
+	// credential question, so there is no timing property to protect here.
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return Principal{}, err
 	}
-	if revokedAt.Valid {
-		return Principal{}, ErrUnauthorized
-	}
 
-	if subtle.ConstantTimeCompare([]byte(hashSecret(secret)), []byte(storedHash)) != 1 {
+	found := err == nil
+	revoked := found && revokedAt.Valid
+
+	// Always run the comparison, even when no row was found or the row is
+	// revoked, so an unknown client id, a revoked client, and a wrong secret
+	// all pay the same hashing and comparison cost. This equalizes the
+	// hash-comparison work only -- it does not make the database lookup
+	// itself constant-time, and a row hit vs. a primary-key miss can still
+	// take a measurably different amount of time. The goal is closing the
+	// large, trivially measurable gap of skipping the comparison entirely,
+	// not achieving perfect constant-time authentication against a database.
+	compareHash := storedHash
+	if !found {
+		compareHash = dummyTokenHash
+	}
+	match := subtle.ConstantTimeCompare([]byte(hashSecret(secret)), []byte(compareHash)) == 1
+
+	if !found || revoked || !match {
 		return Principal{}, ErrUnauthorized
 	}
 
