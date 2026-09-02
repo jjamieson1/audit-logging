@@ -106,7 +106,13 @@ func StartMetricsServer(ctx context.Context, logger *log.Logger, port int, metri
 		})
 	})
 
-	server := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
+	// ReadHeaderTimeout bounds how long a client may take to send headers;
+	// without it this endpoint is open to a Slowloris hold.
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 
 	go func() {
 		<-ctx.Done()

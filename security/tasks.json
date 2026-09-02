@@ -1,0 +1,82 @@
+{
+  "tasks": [
+    {
+      "id": "threat-model-review",
+      "title": "Threat-model review",
+      "category": "Design",
+      "cadence": "Every release",
+      "owner": "",
+      "status": "pending",
+      "lastRun": "",
+      "nextDue": "",
+      "docAnchor": "",
+      "notes": "Re-review trust boundaries when a new integration lands.",
+      "source": "baseline"
+    },
+    {
+      "id": "access-review",
+      "title": "User \u0026 role access review",
+      "category": "Access control",
+      "cadence": "Quarterly",
+      "owner": "",
+      "status": "pending",
+      "lastRun": "",
+      "nextDue": "",
+      "docAnchor": "",
+      "notes": "Confirm every operator role still needs its permissions.",
+      "source": "baseline"
+    },
+    {
+      "id": "dependency-review",
+      "title": "Dependency review",
+      "category": "Dependencies",
+      "cadence": "Monthly",
+      "owner": "",
+      "status": "pending",
+      "lastRun": "",
+      "nextDue": "",
+      "docAnchor": "",
+      "notes": "Triage advisories the automated audit reports as accepted risk.",
+      "source": "baseline"
+    },
+    {
+      "id": "pen-test",
+      "title": "External penetration test",
+      "category": "Dynamic",
+      "cadence": "Annually",
+      "owner": "",
+      "status": "pending",
+      "lastRun": "",
+      "nextDue": "",
+      "docAnchor": "",
+      "notes": "Independent test against a staging environment.",
+      "source": "baseline"
+    },
+    {
+      "id": "backup-restore-test",
+      "title": "Backup restore test",
+      "category": "Infrastructure",
+      "cadence": "Quarterly",
+      "owner": "",
+      "status": "pending",
+      "lastRun": "",
+      "nextDue": "",
+      "docAnchor": "",
+      "notes": "Prove a restore actually works, not just that backups run.",
+      "source": "baseline"
+    },
+    {
+      "id": "incident-response-drill",
+      "title": "Incident-response drill",
+      "category": "Operations",
+      "cadence": "Annually",
+      "owner": "",
+      "status": "pending",
+      "lastRun": "",
+      "nextDue": "",
+      "docAnchor": "",
+      "notes": "Walk a breach scenario end to end, including notification duties.",
+      "source": "baseline"
+    }
+  ]
+}

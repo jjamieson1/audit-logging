@@ -44,7 +44,7 @@ func LoadCheckpoint(path string) (Checkpoint, error) {
 }
 
 func SaveCheckpoint(path string, cp Checkpoint) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("mkdir checkpoint dir: %w", err)
 	}
 
@@ -56,17 +56,17 @@ func SaveCheckpoint(path string, cp Checkpoint) error {
 	}
 
 	tmpPath := path + ".tmp"
-	tmpFile, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	tmpFile, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
 	if err != nil {
 		return fmt.Errorf("open checkpoint temp file: %w", err)
 	}
 
 	if _, err := tmpFile.Write(append(bytes, '\n')); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("write checkpoint temp file: %w", err)
 	}
 	if err := tmpFile.Sync(); err != nil && !isIgnorableSyncErr(err) {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("sync checkpoint temp file: %w", err)
 	}
 	if err := tmpFile.Close(); err != nil {

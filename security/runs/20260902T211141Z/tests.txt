@@ -1,0 +1,5 @@
+?   	audit-logging/clients/go-lib	[no test files]
+?   	audit-logging/clients/go-producer	[no test files]
+ok  	audit-logging/cmd/log-forwarder	(cached)
+ok  	audit-logging/cmd/security-dashboard	(cached)
+ok  	audit-logging/cmd/server	0.485s

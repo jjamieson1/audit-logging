@@ -92,7 +92,7 @@ func (f *Follower) openFromCheckpoint() error {
 	}
 
 	if _, err := file.Seek(startOffset, io.SeekStart); err != nil {
-		file.Close()
+		_ = file.Close()
 		return fmt.Errorf("seek source file: %w", err)
 	}
 
@@ -234,12 +234,12 @@ func openFileWithIdentity(path string) (*os.File, FileIdentity, int64, error) {
 
 	info, err := file.Stat()
 	if err != nil {
-		file.Close()
+		_ = file.Close()
 		return nil, FileIdentity{}, 0, fmt.Errorf("stat source file: %w", err)
 	}
 	identity, err := fileIdentityFromInfo(info)
 	if err != nil {
-		file.Close()
+		_ = file.Close()
 		return nil, FileIdentity{}, 0, err
 	}
 
