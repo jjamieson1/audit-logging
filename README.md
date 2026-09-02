@@ -16,11 +16,35 @@ Centralized infrastructure audit-logging service where all applications can writ
 
 ## API
 
-- `POST /v1/logs`
-- `GET /v1/logs`
-- `GET /v1/logs/search`
-- `GET /v1/verify`
-- `GET /v1/health`
+| Endpoint | Auth | Purpose |
+| --- | --- | --- |
+| `GET /v1/health` | none | Liveness. The only unauthenticated endpoint. |
+| `POST /v1/logs` | bearer token | Append an entry, stamped with the caller's client id. |
+| `GET /v1/logs` | bearer token | Read your entries. |
+| `GET /v1/logs/search` | bearer token | Free-text search over your entries. |
+| `GET /v1/verify` | bearer token | Verify the chain. The result is global. |
+
+All authenticated endpoints take `Authorization: Bearer <token>`. See
+[docs/authorization.md](docs/authorization.md) for how to get a token, and
+[docs/querying.md](docs/querying.md) for paging.
+
+## Authorization
+
+Every client is registered by an operator, which mints a token shown exactly
+once. The client sends it as a bearer token; the server stamps the client's id
+into each entry it writes and confines each read to that client's own entries.
+An `admin` client reads across all of them.
+
+```bash
+audit clients register --name payments-api      # mint a token
+audit clients list                              # who is registered
+audit clients rotate --id <clientId>            # replace a token
+audit clients revoke --id <clientId>            # disable a token
+```
+
+Registration is local-only — there is no HTTP endpoint for it.
+
+Full guide: [docs/authorization.md](docs/authorization.md).
 
 ### View/search logs
 
@@ -29,21 +53,27 @@ Query params:
 - `app` exact app filter
 - `level` exact level filter
 - `q` or `text` free-text search over message/metadata
-- `limit` page size (default `50`, max `500`)
-- `offset` pagination offset (default `0`)
+- `limit` page size (defaults to `DEFAULT_QUERY_LIMIT`, clamped to `MAX_QUERY_LIMIT`)
+- `cursor` opaque page token from the previous response's `nextCursor`
+- `count` set to `true` to include an exact `total` (expensive; off by default)
+- `offset` still supported, but bounded by `MAX_QUERY_OFFSET`; prefer `cursor`
+- `clientId` admin tokens only; narrows to one client
 
-Examples:
+Responses carry `nextCursor`, which is `null` on the last page.
 
 ```bash
-curl -s "http://localhost:8080/v1/logs?limit=20&offset=0"
-curl -s "http://localhost:8080/v1/logs?app=payments-api&level=ERROR"
-curl -s "http://localhost:8080/v1/logs/search?q=timeout&limit=10"
+curl -s "http://localhost:8080/v1/logs?limit=20" -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s "http://localhost:8080/v1/logs?app=payments-api&level=ERROR" -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s "http://localhost:8080/v1/logs/search?q=timeout&limit=10" -H "authorization: Bearer $AUDIT_TOKEN"
 ```
+
+Full paging guide: [docs/querying.md](docs/querying.md).
 
 ### Example write
 
 ```bash
 curl -s -X POST http://localhost:8080/v1/logs \
+  -H "authorization: Bearer $AUDIT_TOKEN" \
   -H "content-type: application/json" \
   -d '{
     "app":"payments-api",
@@ -56,13 +86,23 @@ curl -s -X POST http://localhost:8080/v1/logs \
 ### Verify chain
 
 ```bash
-curl -s http://localhost:8080/v1/verify
+curl -s http://localhost:8080/v1/verify -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
 ## Run
 
+The client registry always lives in PostgreSQL, so `DATABASE_URL` is required
+even when log entries go to a file:
+
 ```bash
+export DATABASE_URL='postgres://audit:audit@localhost:5432/audit?sslmode=disable'
 go run ./cmd/server
+```
+
+Register a client to get a token:
+
+```bash
+go run ./cmd/server clients register --name my-service
 ```
 
 ## Run with Docker Compose
@@ -101,7 +141,13 @@ make retry-sim
 make retry-sim-fast
 make retry-sim-slow
 make retry-sim-bursty
+make test-node
 ```
+
+`verify`, `sample-log`, and `smoke` call authenticated endpoints, so export
+`AUDIT_TOKEN` first (`health` alone needs no token). See
+[docs/authorization.md](docs/authorization.md) for how to register a client
+and get one.
 
 ## Deploy to a server
 
@@ -117,7 +163,7 @@ credential rotation.
 
 ## Producer Clients
 
-For producer client usage, reusable Go/Node client libraries, retry tuning options, and retry simulation presets, see `clients/README.md`.
+For producer client usage, reusable Go/Node client libraries, retry tuning options, and retry simulation presets, see `clients/README.md`. Every example needs `AUDIT_TOKEN` exported first — see [docs/authorization.md](docs/authorization.md).
 
 ## Log Forwarder Agent (M6)
 
@@ -185,11 +231,14 @@ go run ./cmd/server
 
 - `PORT` (default `8080`)
 - `BIND_ADDR` (default empty, listening on all interfaces; set `127.0.0.1` for loopback only)
-- `STORAGE_BACKEND` (default `file`; options: `file`, `postgres`)
-- `DATABASE_URL` (required when `STORAGE_BACKEND=postgres`)
+- `DATABASE_URL` (**required**, always — the client registry lives in PostgreSQL whatever `STORAGE_BACKEND` is)
+- `STORAGE_BACKEND` (default `file`; options: `file`, `postgres`) — where log *entries* go
 - `DATA_DIR` (default `./data`)
 - `LOG_FILE` (default `./data/audit.log.jsonl`)
 - `MAX_PAYLOAD_BYTES` (default `32768`)
+- `DEFAULT_QUERY_LIMIT` (default `50`) page size when a read omits `limit`
+- `MAX_QUERY_LIMIT` (default `500`) ceiling; a larger `limit` is clamped
+- `MAX_QUERY_OFFSET` (default `10000`) largest accepted `offset` before `400`
 
 ## Multi-instance note
 

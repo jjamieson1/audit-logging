@@ -53,9 +53,62 @@ Then, from your machine:
 
 ```bash
 curl -s http://localhost:8080/v1/health
-curl -s http://localhost:8080/v1/verify
-curl -s "http://localhost:8080/v1/logs?limit=20"
+curl -s http://localhost:8080/v1/verify -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s "http://localhost:8080/v1/logs?limit=20" -H "authorization: Bearer $AUDIT_TOKEN"
 ```
+
+All but `/v1/health` need a bearer token — see "Managing clients" below to
+mint one, and [../docs/authorization.md](../docs/authorization.md) for the
+full model.
+
+## Managing clients
+
+Client registration runs on the server, against the local database. The admin
+commands are subcommands of the same binary that runs the service, so there is
+nothing extra to deploy.
+
+```bash
+ssh muni-demo
+sudo -u audit env $(grep -v '^#' /etc/audit/audit.env | xargs) /app/audit/audit clients list
+```
+
+Register a new client and hand over the token:
+
+```bash
+sudo -u audit env $(grep -v '^#' /etc/audit/audit.env | xargs) \
+  /app/audit/audit clients register --name payments-api
+```
+
+The token is printed once and only its hash is stored. Deliver it over a
+channel you would use for any other credential — never over the same ticket or
+chat thread you would use for its client id alone.
+
+Rotate a leaked token:
+
+```bash
+sudo -u audit env $(grep -v '^#' /etc/audit/audit.env | xargs) \
+  /app/audit/audit clients rotate --id <clientId>
+```
+
+Rotation is a hard cutover: the old token stops working immediately, so update
+and restart the client promptly. The client id is unchanged, so entries it has
+already written keep their attribution.
+
+Decommission a client:
+
+```bash
+sudo -u audit env $(grep -v '^#' /etc/audit/audit.env | xargs) \
+  /app/audit/audit clients revoke --id <clientId>
+```
+
+The row is kept so historical entries stay attributable. A revoked client
+cannot be rotated back into service — register a new one.
+
+An `admin`-role client can read every tenant's entries. Register one only when
+something genuinely needs a cross-tenant view, and treat its token accordingly.
+
+See [../docs/authorization.md](../docs/authorization.md) for the full
+authorization model.
 
 ## Operations
 

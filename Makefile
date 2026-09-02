@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-.PHONY: up down test logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty forwarder-validate forwarder-run
+.PHONY: up down test test-node logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty forwarder-validate forwarder-run
 
 up:
 	docker compose up --build
@@ -10,6 +10,9 @@ down:
 
 test:
 	go test ./...
+
+test-node:
+	node --test clients/node-lib/*.test.mjs
 
 logs:
 	docker compose logs -f
@@ -28,10 +31,19 @@ health:
 	curl -s http://localhost:8080/v1/health
 
 verify:
-	curl -s http://localhost:8080/v1/verify
+	@if [ -z "$(AUDIT_TOKEN)" ]; then \
+		echo "AUDIT_TOKEN is not set. Register a client (go run ./cmd/server clients register --name <name>) and export AUDIT_TOKEN=<token>. See docs/authorization.md."; \
+		exit 1; \
+	fi
+	curl -s http://localhost:8080/v1/verify -H "authorization: Bearer $(AUDIT_TOKEN)"
 
 sample-log:
+	@if [ -z "$(AUDIT_TOKEN)" ]; then \
+		echo "AUDIT_TOKEN is not set. Register a client (go run ./cmd/server clients register --name <name>) and export AUDIT_TOKEN=<token>. See docs/authorization.md."; \
+		exit 1; \
+	fi
 	curl -s -X POST http://localhost:8080/v1/logs \
+		-H "authorization: Bearer $(AUDIT_TOKEN)" \
 		-H "content-type: application/json" \
 		-d '{"app":"sample-app","level":"INFO","message":"sample log","metadata":{"source":"make"}}'
 

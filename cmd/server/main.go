@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -28,9 +27,15 @@ type Config struct {
 	DatabaseURL     string
 	LogFile         string
 	MaxPayloadBytes int64
+	Query           QueryLimits
 }
 
 type LogRecord struct {
+	// ClientID is stamped by the server from the authenticated token. It lives
+	// inside the record so it is covered by payloadHash and the chain, making
+	// attribution tamper-evident. omitempty keeps pre-attribution entries
+	// hashing exactly as they did.
+	ClientID string         `json:"clientId,omitempty"`
 	App      string         `json:"app"`
 	Level    string         `json:"level"`
 	Message  string         `json:"message"`
@@ -55,18 +60,38 @@ type VerifyResult struct {
 }
 
 type LogQuery struct {
-	App    string
-	Level  string
-	Text   string
-	Limit  int
-	Offset int
+	// ClientID confines the result to one client. The handlers set it from the
+	// authenticated principal; it is never taken from caller input except for
+	// an admin.
+	ClientID string
+	App      string
+	Level    string
+	Text     string
+	Limit    int
+	Offset   int
+	// AfterIndex is the keyset position. Zero means no cursor was supplied;
+	// entry indexes start at 1, so zero is unambiguous.
+	AfterIndex uint64
+	// WantTotal opts in to the exact count, which costs a full scan of the
+	// matching set. Off by default.
+	WantTotal bool
 }
 
 type LogQueryResult struct {
-	Items  []Entry `json:"items"`
-	Total  int     `json:"total"`
-	Limit  int     `json:"limit"`
-	Offset int     `json:"offset"`
+	Items []Entry `json:"items"`
+	Limit int     `json:"limit"`
+	// NextCursor is always serialised; null means this was the last page.
+	NextCursor *string `json:"nextCursor"`
+	// Total and Offset are pointers so an absent value serialises as absent.
+	// A plain int would emit "total": 0 on every uncounted response, which
+	// reads as an empty result set.
+	Total *int `json:"total,omitempty"`
+	// Offset is populated only when query.Offset > 0 (see FileStore.QueryLogs
+	// and PostgresStore.QueryLogs), so an explicit offset=0 request gets no
+	// "offset" field back, same as no offset at all. This is deliberate: an
+	// offset of zero is indistinguishable from "unset" for echo purposes, and
+	// pinned by TestFileStoreQueryLogsOffsetZeroOmitsOffsetField.
+	Offset *int `json:"offset,omitempty"`
 }
 
 type Store interface {
@@ -104,6 +129,13 @@ func loadConfig() Config {
 		maxPayloadBytes = 32768
 	}
 
+	defaults := defaultQueryLimits()
+	queryLimits := QueryLimits{
+		DefaultLimit: envInt("DEFAULT_QUERY_LIMIT", defaults.DefaultLimit),
+		MaxLimit:     envInt("MAX_QUERY_LIMIT", defaults.MaxLimit),
+		MaxOffset:    envInt("MAX_QUERY_OFFSET", defaults.MaxOffset),
+	}
+
 	return Config{
 		Port:            port,
 		BindAddr:        bindAddr,
@@ -111,6 +143,7 @@ func loadConfig() Config {
 		DatabaseURL:     databaseURL,
 		LogFile:         logFile,
 		MaxPayloadBytes: maxPayloadBytes,
+		Query:           queryLimits,
 	}
 }
 
@@ -206,11 +239,10 @@ func (s *FileStore) Verify() (VerifyResult, error) {
 	return s.verifyChainUnsafe()
 }
 
+// QueryLogs assumes query.Limit is positive; parseLogQuery guarantees it.
 func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	query = normalizeLogQuery(query)
 
 	file, err := os.Open(s.path)
 	if err != nil {
@@ -222,7 +254,9 @@ func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	items := make([]Entry, 0, query.Limit)
-	matched := 0
+	total := 0
+	skipped := 0
+	hasMore := false
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -239,22 +273,51 @@ func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 			continue
 		}
 
-		if matched >= query.Offset && len(items) < query.Limit {
-			items = append(items, entry)
+		// Counted before the cursor is applied: Total is the size of the
+		// matching set, not of what remains after the cursor.
+		total++
+
+		if entry.Index <= query.AfterIndex {
+			continue
 		}
-		matched++
+		if skipped < query.Offset {
+			skipped++
+			continue
+		}
+
+		if len(items) < query.Limit {
+			items = append(items, entry)
+			continue
+		}
+
+		// One past a full page proves there is a next page. Without a total to
+		// finish, there is nothing left to learn from the rest of the file.
+		hasMore = true
+		if !query.WantTotal {
+			break
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return LogQueryResult{}, err
 	}
 
-	return LogQueryResult{
-		Items:  items,
-		Total:  matched,
-		Limit:  query.Limit,
-		Offset: query.Offset,
-	}, nil
+	result := LogQueryResult{Items: items, Limit: query.Limit}
+	if query.WantTotal {
+		result.Total = &total
+	}
+	// offset=0 deliberately omits the field; see the Offset comment on
+	// LogQueryResult.
+	if query.Offset > 0 {
+		offset := query.Offset
+		result.Offset = &offset
+	}
+	if hasMore && len(items) > 0 {
+		cursor := encodeCursor(items[len(items)-1].Index)
+		result.NextCursor = &cursor
+	}
+
+	return result, nil
 }
 
 func (s *FileStore) verifyChainUnsafe() (VerifyResult, error) {
@@ -327,34 +390,21 @@ func (s *FileStore) verifyChainUnsafe() (VerifyResult, error) {
 	return VerifyResult{Valid: true, TotalEntries: total, LastHash: previousHash}, nil
 }
 
-func NewPostgresStore(databaseURL string) (*PostgresStore, error) {
-	if strings.TrimSpace(databaseURL) == "" {
-		return nil, errors.New("DATABASE_URL is required for postgres backend")
-	}
-
-	db, err := sql.Open("postgres", databaseURL)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := db.Ping(); err != nil {
-		_ = db.Close()
-		return nil, err
+func NewPostgresStore(db *sql.DB) (*PostgresStore, error) {
+	if db == nil {
+		return nil, errors.New("a database handle is required for the postgres backend")
 	}
 
 	store := &PostgresStore{db: db}
 	if err := store.ensureSchema(); err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 
 	verify, err := store.Verify()
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 	if !verify.Valid {
-		_ = db.Close()
 		return nil, fmt.Errorf("invalid chain at index %d", derefUint64(verify.InvalidAt))
 	}
 
@@ -372,6 +422,8 @@ CREATE TABLE IF NOT EXISTS audit_log_entries (
     record_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_audit_log_entries_index ON audit_log_entries(entry_index);
+CREATE INDEX IF NOT EXISTS idx_audit_log_entries_client_index
+    ON audit_log_entries ((record_json::jsonb->>'clientId'), entry_index);
 `
 	_, err := s.db.Exec(query)
 	return err
@@ -496,42 +548,71 @@ ORDER BY entry_index ASC
 	return VerifyResult{Valid: true, TotalEntries: total, LastHash: previousHash}, nil
 }
 
+// QueryLogs assumes query.Limit is positive; parseLogQuery guarantees it.
 func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
-	query = normalizeLogQuery(query)
+	filters := make([]string, 0, 4)
+	filterArgs := make([]any, 0, 5)
 
-	clauses := make([]string, 0)
-	args := make([]any, 0)
-
+	if query.ClientID != "" {
+		filterArgs = append(filterArgs, query.ClientID)
+		filters = append(filters, fmt.Sprintf("record_json::jsonb->>'clientId' = $%d", len(filterArgs)))
+	}
 	if query.App != "" {
-		args = append(args, query.App)
-		clauses = append(clauses, fmt.Sprintf("record_json::jsonb->>'app' = $%d", len(args)))
+		filterArgs = append(filterArgs, query.App)
+		filters = append(filters, fmt.Sprintf("record_json::jsonb->>'app' = $%d", len(filterArgs)))
 	}
 	if query.Level != "" {
-		args = append(args, query.Level)
-		clauses = append(clauses, fmt.Sprintf("record_json::jsonb->>'level' = $%d", len(args)))
+		filterArgs = append(filterArgs, query.Level)
+		filters = append(filters, fmt.Sprintf("record_json::jsonb->>'level' = $%d", len(filterArgs)))
 	}
 	if query.Text != "" {
-		args = append(args, "%"+query.Text+"%")
-		placeholder := fmt.Sprintf("$%d", len(args))
-		clauses = append(clauses, "(record_json::jsonb->>'message' ILIKE "+placeholder+" OR record_json ILIKE "+placeholder+")")
+		filterArgs = append(filterArgs, "%"+query.Text+"%")
+		placeholder := fmt.Sprintf("$%d", len(filterArgs))
+		filters = append(filters, "(record_json::jsonb->>'message' ILIKE "+placeholder+" OR record_json ILIKE "+placeholder+")")
 	}
 
-	where := ""
-	if len(clauses) > 0 {
-		where = " WHERE " + strings.Join(clauses, " AND ")
+	filterWhere := ""
+	if len(filters) > 0 {
+		filterWhere = " WHERE " + strings.Join(filters, " AND ")
 	}
 
-	countQuery := "SELECT COUNT(*) FROM audit_log_entries" + where
-	var total int
-	if err := s.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
-		return LogQueryResult{}, err
+	result := LogQueryResult{Limit: query.Limit}
+
+	// Opt-in only: this scans every matching row.
+	if query.WantTotal {
+		var total int
+		if err := s.db.QueryRow("SELECT COUNT(*) FROM audit_log_entries"+filterWhere, filterArgs...).Scan(&total); err != nil {
+			return LogQueryResult{}, err
+		}
+		result.Total = &total
 	}
 
-	args = append(args, query.Limit, query.Offset)
+	listArgs := append([]any{}, filterArgs...)
+	listWhere := filterWhere
+	if query.AfterIndex > 0 {
+		listArgs = append(listArgs, int64(query.AfterIndex))
+		clause := fmt.Sprintf("entry_index > $%d", len(listArgs))
+		if listWhere == "" {
+			listWhere = " WHERE " + clause
+		} else {
+			listWhere += " AND " + clause
+		}
+	}
+
+	// One extra row answers "is there another page" without a second query.
+	listArgs = append(listArgs, query.Limit+1)
+	limitClause := fmt.Sprintf(" LIMIT $%d", len(listArgs))
+
+	offsetClause := ""
+	if query.Offset > 0 {
+		listArgs = append(listArgs, query.Offset)
+		offsetClause = fmt.Sprintf(" OFFSET $%d", len(listArgs))
+	}
+
 	listQuery := "SELECT entry_index, ts, prev_hash, payload_hash, entry_hash, record_json FROM audit_log_entries" +
-		where + fmt.Sprintf(" ORDER BY entry_index ASC LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+		listWhere + " ORDER BY entry_index ASC" + limitClause + offsetClause
 
-	rows, err := s.db.Query(listQuery, args...)
+	rows, err := s.db.Query(listQuery, listArgs...)
 	if err != nil {
 		return LogQueryResult{}, err
 	}
@@ -564,12 +645,19 @@ func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 		return LogQueryResult{}, err
 	}
 
-	return LogQueryResult{
-		Items:  items,
-		Total:  total,
-		Limit:  query.Limit,
-		Offset: query.Offset,
-	}, nil
+	if len(items) > query.Limit {
+		items = items[:query.Limit]
+		cursor := encodeCursor(items[len(items)-1].Index)
+		result.NextCursor = &cursor
+	}
+
+	result.Items = items
+	if query.Offset > 0 {
+		offset := query.Offset
+		result.Offset = &offset
+	}
+
+	return result, nil
 }
 
 func sha256Hex(input []byte) string {
@@ -577,25 +665,13 @@ func sha256Hex(input []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func normalizeLogQuery(query LogQuery) LogQuery {
-	query.App = strings.TrimSpace(query.App)
-	query.Level = strings.TrimSpace(query.Level)
-	query.Text = strings.TrimSpace(query.Text)
-
-	if query.Limit <= 0 {
-		query.Limit = 50
-	}
-	if query.Limit > 500 {
-		query.Limit = 500
-	}
-	if query.Offset < 0 {
-		query.Offset = 0
-	}
-
-	return query
-}
-
 func matchesQuery(entry Entry, query LogQuery) bool {
+	// Exact comparison, unlike app and level: client ids are generated
+	// identifiers, and a case-insensitive match on a security boundary is a
+	// bug waiting to happen.
+	if query.ClientID != "" && entry.Record.ClientID != query.ClientID {
+		return false
+	}
 	if query.App != "" && !strings.EqualFold(entry.Record.App, query.App) {
 		return false
 	}
@@ -619,43 +695,6 @@ func matchesQuery(entry Entry, query LogQuery) bool {
 	return strings.Contains(haystack, strings.ToLower(query.Text))
 }
 
-func parseLogQuery(r *http.Request) (LogQuery, error) {
-	values := r.URL.Query()
-
-	limit := 50
-	if raw := strings.TrimSpace(values.Get("limit")); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			return LogQuery{}, fmt.Errorf("invalid limit")
-		}
-		limit = parsed
-	}
-
-	offset := 0
-	if raw := strings.TrimSpace(values.Get("offset")); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			return LogQuery{}, fmt.Errorf("invalid offset")
-		}
-		offset = parsed
-	}
-
-	text := strings.TrimSpace(values.Get("q"))
-	if text == "" {
-		text = strings.TrimSpace(values.Get("text"))
-	}
-
-	query := normalizeLogQuery(LogQuery{
-		App:    values.Get("app"),
-		Level:  values.Get("level"),
-		Text:   text,
-		Limit:  limit,
-		Offset: offset,
-	})
-
-	return query, nil
-}
-
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(status)
@@ -673,16 +712,39 @@ func withMethod(method string, handler http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	// Admin subcommands run against the registry and exit without starting a
+	// listener, so deployment ships one binary.
+	if len(os.Args) > 1 && os.Args[1] == "clients" {
+		os.Exit(runClientsCommand(os.Args[2:]))
+	}
+
 	cfg := loadConfig()
 
-	var (
-		store Store
-		err   error
-	)
+	// The client registry always lives in PostgreSQL, so a database is
+	// required even when log entries go to a file.
+	if strings.TrimSpace(cfg.DatabaseURL) == "" {
+		log.Fatal("DATABASE_URL is required: the client registry is always stored in PostgreSQL, whatever STORAGE_BACKEND is set to")
+	}
 
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("failed to reach database: %v", err)
+	}
+
+	clientStore, err := NewPostgresClientStore(db)
+	if err != nil {
+		log.Fatalf("failed to initialize client registry: %v", err)
+	}
+
+	var store Store
 	switch cfg.StorageBackend {
 	case "postgres":
-		store, err = NewPostgresStore(cfg.DatabaseURL)
+		store, err = NewPostgresStore(db)
 		if err != nil {
 			log.Fatalf("failed to initialize postgres store: %v", err)
 		}
@@ -698,102 +760,7 @@ func main() {
 		log.Fatalf("invalid STORAGE_BACKEND: %s", cfg.StorageBackend)
 	}
 
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/v1/health", withMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	}))
-
-	mux.HandleFunc("/v1/logs", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			r.Body = http.MaxBytesReader(w, r.Body, cfg.MaxPayloadBytes)
-			defer r.Body.Close()
-
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "payload exceeds max size"})
-				return
-			}
-
-			var input LogRecord
-			if err := json.Unmarshal(body, &input); err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
-				return
-			}
-
-			input.App = strings.TrimSpace(input.App)
-			input.Level = strings.TrimSpace(input.Level)
-			input.Message = strings.TrimSpace(input.Message)
-			if input.App == "" || input.Level == "" || input.Message == "" {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "app, level, and message are required"})
-				return
-			}
-			if input.Metadata == nil {
-				input.Metadata = map[string]any{}
-			}
-
-			entry, err := store.Append(input)
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to append log entry"})
-				return
-			}
-
-			writeJSON(w, http.StatusCreated, map[string]any{
-				"index":     entry.Index,
-				"timestamp": entry.Timestamp,
-				"entryHash": entry.EntryHash,
-				"prevHash":  entry.PrevHash,
-			})
-		case http.MethodGet:
-			query, err := parseLogQuery(r)
-			if err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-				return
-			}
-
-			result, err := store.QueryLogs(query)
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to query logs"})
-				return
-			}
-
-			writeJSON(w, http.StatusOK, result)
-		default:
-			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
-		}
-	})
-
-	mux.HandleFunc("/v1/logs/search", withMethod(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
-		query, err := parseLogQuery(r)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
-		}
-
-		result, err := store.QueryLogs(query)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to query logs"})
-			return
-		}
-
-		writeJSON(w, http.StatusOK, result)
-	}))
-
-	mux.HandleFunc("/v1/verify", withMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
-		result, err := store.Verify()
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to verify chain"})
-			return
-		}
-
-		if result.Valid {
-			writeJSON(w, http.StatusOK, result)
-			return
-		}
-
-		writeJSON(w, http.StatusConflict, result)
-	}))
+	mux := newRouter(cfg, store, clientStore)
 
 	addr := cfg.ListenAddr()
 	log.Printf("audit-logging listening on %s", addr)

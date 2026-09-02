@@ -2,6 +2,7 @@ export class AuditLogger {
   constructor({
     endpoint = "http://localhost:8080/v1/logs",
     fetchImpl = globalThis.fetch,
+    authToken = "",
     retry = {}
   } = {}) {
     if (!fetchImpl) {
@@ -10,6 +11,7 @@ export class AuditLogger {
 
     this.endpoint = endpoint;
     this.fetchImpl = fetchImpl;
+    this.authToken = String(authToken ?? "").trim();
     this.retry = {
       maxAttempts: Number(retry.maxAttempts ?? 1),
       initialBackoffMs: Number(retry.initialBackoffMs ?? 100),
@@ -50,7 +52,9 @@ export class AuditLogger {
         const response = await this.fetchImpl(this.endpoint, {
           method: "POST",
           headers: {
-            "content-type": "application/json"
+            "content-type": "application/json",
+            // Spread so the header is absent, not empty, when unconfigured.
+            ...(this.authToken ? { authorization: `Bearer ${this.authToken}` } : {})
           },
           body: JSON.stringify({ app, level, message, metadata })
         });
@@ -58,6 +62,12 @@ export class AuditLogger {
         const textBody = await response.text();
         if (!response.ok) {
           const error = new Error(`audit service returned ${response.status}: ${textBody}`);
+          if (!shouldRetryStatus(response.status)) {
+            // Non-retryable status (e.g. 401): mark it so the catch below
+            // rethrows immediately instead of treating it like a transient
+            // failure and looping through the remaining attempts.
+            error.retryable = false;
+          }
           if (!shouldRetryStatus(response.status) || attempt === maxAttempts) {
             throw error;
           }
@@ -71,7 +81,7 @@ export class AuditLogger {
         }
       } catch (error) {
         lastError = error;
-        if (attempt === maxAttempts) {
+        if (attempt === maxAttempts || error?.retryable === false) {
           throw error;
         }
       }

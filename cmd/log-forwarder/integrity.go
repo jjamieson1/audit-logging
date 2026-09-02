@@ -35,7 +35,7 @@ func VerifyEndpointFromLogsEndpoint(logsEndpoint string) (string, error) {
 	return u.String(), nil
 }
 
-func StartIntegrityVerifier(ctx context.Context, logger *log.Logger, logsEndpoint string, timeout time.Duration, interval time.Duration) {
+func StartIntegrityVerifier(ctx context.Context, logger *log.Logger, logsEndpoint string, authBearerToken string, timeout time.Duration, interval time.Duration) {
 	verifyEndpoint, err := VerifyEndpointFromLogsEndpoint(logsEndpoint)
 	if err != nil {
 		logger.Printf("event=verify_init_failed err=%q", err)
@@ -55,6 +55,9 @@ func StartIntegrityVerifier(ctx context.Context, logger *log.Logger, logsEndpoin
 			if err != nil {
 				logger.Printf("event=verify_request_build_failed err=%q", err)
 				continue
+			}
+			if strings.TrimSpace(authBearerToken) != "" {
+				req.Header.Set("authorization", "Bearer "+strings.TrimSpace(authBearerToken))
 			}
 			res, err := client.Do(req)
 			if err != nil {
