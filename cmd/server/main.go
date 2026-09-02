@@ -705,6 +705,12 @@ func withMethod(method string, handler http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	// Admin subcommands run against the registry and exit without starting a
+	// listener, so deployment ships one binary.
+	if len(os.Args) > 1 && os.Args[1] == "clients" {
+		os.Exit(runClientsCommand(os.Args[2:]))
+	}
+
 	cfg := loadConfig()
 
 	// The client registry always lives in PostgreSQL, so a database is
