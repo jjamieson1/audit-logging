@@ -1,5 +1,5 @@
 {
-  "server_url": "http://localhost:3001/v1/logs",
+  "server_url": "http://localhost:8080/v1/logs",
   "auth_bearer_token": "replace-with-token",
   "source_file": "./data/audit.log.jsonl",
   "app_name": "payments-api",
