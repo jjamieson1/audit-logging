@@ -77,6 +77,15 @@ func handleWriteLog(w http.ResponseWriter, r *http.Request, cfg Config, store St
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "missing principal"})
 		return
 	}
+	if principal.ClientID == "" {
+		// Fail closed: stamping an empty client id would store an entry
+		// indistinguishable from a pre-authorization legacy row. Not reachable
+		// through PostgresClientStore today, but this is the one line whose
+		// entire job is attribution, so it must not trust a zero-value
+		// Principal from any future ClientStore.
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "principal missing client id"})
+		return
+	}
 
 	// Assigned from the token, overwriting whatever the caller sent, so
 	// attribution cannot be forged.
@@ -117,6 +126,15 @@ func handleReadLogs(w http.ResponseWriter, r *http.Request, cfg Config, store St
 	principal, ok := principalFrom(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "missing principal"})
+		return
+	}
+	if principal.ClientID == "" {
+		// Fail closed on the principal's own id being empty — every real
+		// principal has one. This is distinct from scopeQuery ever setting
+		// query.ClientID to "" for an admin with no clientId parameter, which
+		// legitimately means "everything" and must keep working: this check
+		// runs before scopeQuery and never looks at query.ClientID.
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "principal missing client id"})
 		return
 	}
 	query = scopeQuery(query, principal, r)

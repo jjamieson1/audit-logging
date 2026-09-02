@@ -204,15 +204,21 @@ LIMIT 1`).Scan(&message); err != nil {
 	})
 
 	t.Run("composite client index exists", func(t *testing.T) {
-		var indexName string
+		// Asserting only indexname would pass for a single-column index too,
+		// which is exactly the property the design insists on. indexdef
+		// carries the real column list, so check both columns are in it.
+		var indexDef string
 		err := store.db.QueryRow(`
-SELECT indexname FROM pg_indexes
-WHERE tablename = 'audit_log_entries' AND indexname = 'idx_audit_log_entries_client_index'`).Scan(&indexName)
+SELECT indexdef FROM pg_indexes
+WHERE tablename = 'audit_log_entries' AND indexname = 'idx_audit_log_entries_client_index'`).Scan(&indexDef)
 		if err != nil {
 			t.Fatalf("idx_audit_log_entries_client_index not found: %v", err)
 		}
-		if indexName != "idx_audit_log_entries_client_index" {
-			t.Fatalf("indexname = %q, want %q", indexName, "idx_audit_log_entries_client_index")
+		if !strings.Contains(indexDef, "clientId") {
+			t.Fatalf("indexdef = %q, want it to reference clientId", indexDef)
+		}
+		if !strings.Contains(indexDef, "entry_index") {
+			t.Fatalf("indexdef = %q, want it to reference entry_index — the index must be composite, not clientId alone", indexDef)
 		}
 	})
 
@@ -237,23 +243,25 @@ WHERE COALESCE(record_json::jsonb->>'clientId', '') = ''`).Scan(&legacyCount); e
 			t.Skip("no unattributed legacy rows present; nothing to assert")
 		}
 
-		result, err := store.QueryLogs(LogQuery{Limit: 20, ClientID: ""})
+		// Limit covers the whole table, so every legacy row is guaranteed to
+		// be on this one page — no reliance on where legacy rows happen to
+		// sort, and nothing here can skip past an unmet assertion.
+		result, err := store.QueryLogs(LogQuery{Limit: rowCount, ClientID: ""})
 		if err != nil {
 			t.Fatalf("QueryLogs() error: %v", err)
 		}
-		if len(result.Items) == 0 {
-			t.Fatal("unscoped query returned no items, want rows including legacy entries")
+		if len(result.Items) != rowCount {
+			t.Fatalf("unscoped query returned %d items, want all %d rows", len(result.Items), rowCount)
 		}
 
-		var sawLegacy bool
+		var seenLegacy int
 		for _, item := range result.Items {
 			if item.Record.ClientID == "" {
-				sawLegacy = true
-				break
+				seenLegacy++
 			}
 		}
-		if !sawLegacy {
-			t.Skip("first page did not happen to include a legacy entry; legacy presence already confirmed via COUNT above")
+		if seenLegacy != legacyCount {
+			t.Fatalf("unscoped query saw %d unattributed entries, want %d", seenLegacy, legacyCount)
 		}
 	})
 }

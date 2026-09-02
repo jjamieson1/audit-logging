@@ -409,3 +409,75 @@ func TestScopedPaginationDoesNotLeakAcrossClients(t *testing.T) {
 		t.Fatalf("cursor walk saw %d of beta's entries, want 2", seen)
 	}
 }
+
+func TestCountIsScopedToTheCallersClient(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	// limit=1 matters: it proves Total is the size of the matching set, not
+	// of the returned page — a leak here would tell alpha exactly how many
+	// entries beta has even though the items list stays correctly scoped.
+	resp := do(t, server, http.MethodGet, "/v1/logs?limit=1&count=true", tokenAlpha, "")
+	result := decodeResult(t, resp)
+	if result.Total == nil {
+		t.Fatal("Total = nil, want a value")
+	}
+	if *result.Total != 2 {
+		t.Fatalf("alpha's total = %d, want 2", *result.Total)
+	}
+
+	resp = do(t, server, http.MethodGet, "/v1/logs?limit=1&count=true", tokenAdmin, "")
+	result = decodeResult(t, resp)
+	if result.Total == nil {
+		t.Fatal("Total = nil, want a value")
+	}
+	if *result.Total != 5 {
+		t.Fatalf("admin's total = %d, want all 5", *result.Total)
+	}
+}
+
+func TestAppAndLevelFiltersCannotReachAcrossClients(t *testing.T) {
+	server, store, _ := newTestServer(t)
+	seedTwoClientsAndLegacy(t, store)
+
+	// Every "billing" entry belongs to beta; alpha owns none.
+	resp := do(t, server, http.MethodGet, "/v1/logs?app=billing&limit=50", tokenAlpha, "")
+	result := decodeResult(t, resp)
+	if len(result.Items) != 0 {
+		t.Fatalf("app filter returned %d of beta's entries to alpha, want 0", len(result.Items))
+	}
+
+	// Both alpha and beta have an ERROR entry; alpha must see only its own.
+	resp = do(t, server, http.MethodGet, "/v1/logs?level=ERROR&limit=50", tokenAlpha, "")
+	result = decodeResult(t, resp)
+	if len(result.Items) != 1 {
+		t.Fatalf("level filter returned %d entries, want alpha's 1", len(result.Items))
+	}
+	if result.Items[0].Record.ClientID != clientAlpha {
+		t.Fatalf("level filter returned an entry belonging to %q", result.Items[0].Record.ClientID)
+	}
+}
+
+func TestReadFailsClosedWhenPrincipalHasNoClientID(t *testing.T) {
+	server, _, clients := newTestServer(t)
+
+	const tokenBroken = "alog_4444444444444444_broken-secret"
+	clients.byToken[tokenBroken] = Principal{ClientID: "", Name: "broken", Role: RoleClient}
+
+	resp := do(t, server, http.MethodGet, "/v1/logs", tokenBroken, "")
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d — an empty principal client id must fail closed, not read everything", resp.StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestWriteFailsClosedWhenPrincipalHasNoClientID(t *testing.T) {
+	server, _, clients := newTestServer(t)
+
+	const tokenBroken = "alog_4444444444444444_broken-secret"
+	clients.byToken[tokenBroken] = Principal{ClientID: "", Name: "broken", Role: RoleClient}
+
+	resp := do(t, server, http.MethodPost, "/v1/logs", tokenBroken, `{"app":"a","level":"INFO","message":"m"}`)
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d — an empty principal client id must not be stamped onto a write", resp.StatusCode, http.StatusInternalServerError)
+	}
+}
