@@ -1,1 +1,3 @@
 data/
+build/
+cmd/log-forwarder/log-forwarder
