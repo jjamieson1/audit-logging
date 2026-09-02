@@ -2,6 +2,22 @@
 
 This folder contains reusable client libraries and runnable producer examples.
 
+## Authorization
+
+Every producer needs a token. An operator mints one on the server with
+`audit clients register --name <service>`; it is displayed once and only its
+hash is stored.
+
+- Go: set `client.AuthToken`
+- Node: pass `authToken` to `AuditLogger`
+- Forwarder: set `auth_bearer_token` in its config file
+
+Keep the token in a secret store, not in source. Both libraries retry on `429`
+and `5xx` only — a `401` is surfaced immediately, because a rejected token will
+not become valid on a retry.
+
+See [../docs/authorization.md](../docs/authorization.md).
+
 ## Go library
 
 Library path: `clients/go-lib/client.go`
@@ -13,12 +29,14 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 	auditclient "audit-logging/clients/go-lib"
 )
 
 func main() {
 	client := auditclient.New("http://localhost:8080/v1/logs", nil)
+	client.AuthToken = os.Getenv("AUDIT_TOKEN")
 	client.Retry = auditclient.RetryConfig{
 		MaxAttempts:    3,
 		InitialBackoff: 200 * time.Millisecond,
@@ -55,6 +73,7 @@ import { createAuditLogger } from "./clients/node-lib/index.mjs";
 
 const client = createAuditLogger({
   endpoint: "http://localhost:8080/v1/logs",
+  authToken: process.env.AUDIT_TOKEN,
   retry: {
     maxAttempts: 3,
     initialBackoffMs: 200,
@@ -101,13 +120,14 @@ Environment variables for both producers:
 
 ## curl examples
 
-Set a base URL:
+Set a base URL and token (see [Authorization](#authorization) above):
 
 ```bash
 AUDIT_BASE_URL="http://localhost:8080"
+AUDIT_TOKEN="alog_..."
 ```
 
-Health check:
+Health check (the only endpoint that needs no token):
 
 ```bash
 curl -s "$AUDIT_BASE_URL/v1/health"
@@ -117,6 +137,7 @@ Write a log entry:
 
 ```bash
 curl -s -X POST "$AUDIT_BASE_URL/v1/logs" \
+	-H "authorization: Bearer $AUDIT_TOKEN" \
 	-H "content-type: application/json" \
 	-d '{
 		"app":"mininghub-service",
@@ -130,6 +151,7 @@ Write an error log entry:
 
 ```bash
 curl -s -X POST "$AUDIT_BASE_URL/v1/logs" \
+	-H "authorization: Bearer $AUDIT_TOKEN" \
 	-H "content-type: application/json" \
 	-d '{
 		"app":"payments-api",
@@ -142,13 +164,14 @@ curl -s -X POST "$AUDIT_BASE_URL/v1/logs" \
 Verify chain integrity:
 
 ```bash
-curl -s "$AUDIT_BASE_URL/v1/verify"
+curl -s "$AUDIT_BASE_URL/v1/verify" -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
 Example invalid payload (missing `message`) to confirm validation:
 
 ```bash
 curl -s -X POST "$AUDIT_BASE_URL/v1/logs" \
+	-H "authorization: Bearer $AUDIT_TOKEN" \
 	-H "content-type: application/json" \
 	-d '{"app":"orders-api","level":"INFO"}'
 ```

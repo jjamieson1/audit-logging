@@ -14,7 +14,7 @@ Current implementation status:
 ## Prerequisites
 
 - Go 1.22+
-- Running audit logging service endpoint (for example `http://localhost:3001/v1/logs`)
+- Running audit logging service endpoint (for example `http://localhost:8080/v1/logs`)
 - Read access to source log file path
 
 ## Quick Start
@@ -46,8 +46,13 @@ go run ./cmd/log-forwarder -config ./configs/log-forwarder.json
 
 Required fields:
 
-- `server_url`: audit service logs endpoint (for example `http://localhost:3001/v1/logs`)
-- `auth_bearer_token`: bearer token used for REST calls
+- `server_url`: audit service logs endpoint (for example `http://localhost:8080/v1/logs`)
+- `auth_bearer_token`: the forwarder's registered client token. An operator
+  mints it on the audit host with `audit clients register --name <forwarder>`;
+  it is shown once. Every entry the forwarder delivers is attributed to that
+  client, and the forwarder's `/v1/verify` integrity checks use the same token.
+  A rotation is a hard cutover: update this value and restart the forwarder.
+  See [../../docs/authorization.md](../../docs/authorization.md).
 - `source_file`: absolute or relative path to tailed log file
 - `app_name`: app name attached to outbound payloads
 - `timestamp_field`: source timestamp field name (used by parser)
@@ -109,8 +114,8 @@ At `verify_interval_ms`, the forwarder calls `/v1/verify` (derived from `server_
 
 Example:
 
-- `server_url: http://localhost:3001/v1/logs`
-- verify endpoint: `http://localhost:3001/v1/verify`
+- `server_url: http://localhost:8080/v1/logs`
+- verify endpoint: `http://localhost:8080/v1/verify`
 
 ## Dead-Letter Format
 
