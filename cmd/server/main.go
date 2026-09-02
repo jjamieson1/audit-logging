@@ -28,6 +28,7 @@ type Config struct {
 	DatabaseURL     string
 	LogFile         string
 	MaxPayloadBytes int64
+	Query           QueryLimits
 }
 
 type LogRecord struct {
@@ -104,6 +105,13 @@ func loadConfig() Config {
 		maxPayloadBytes = 32768
 	}
 
+	defaults := defaultQueryLimits()
+	queryLimits := QueryLimits{
+		DefaultLimit: envInt("DEFAULT_QUERY_LIMIT", defaults.DefaultLimit),
+		MaxLimit:     envInt("MAX_QUERY_LIMIT", defaults.MaxLimit),
+		MaxOffset:    envInt("MAX_QUERY_OFFSET", defaults.MaxOffset),
+	}
+
 	return Config{
 		Port:            port,
 		BindAddr:        bindAddr,
@@ -111,6 +119,7 @@ func loadConfig() Config {
 		DatabaseURL:     databaseURL,
 		LogFile:         logFile,
 		MaxPayloadBytes: maxPayloadBytes,
+		Query:           queryLimits,
 	}
 }
 
@@ -209,8 +218,6 @@ func (s *FileStore) Verify() (VerifyResult, error) {
 func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	query = normalizeLogQuery(query)
 
 	file, err := os.Open(s.path)
 	if err != nil {
@@ -497,8 +504,6 @@ ORDER BY entry_index ASC
 }
 
 func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
-	query = normalizeLogQuery(query)
-
 	clauses := make([]string, 0)
 	args := make([]any, 0)
 
@@ -577,24 +582,6 @@ func sha256Hex(input []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func normalizeLogQuery(query LogQuery) LogQuery {
-	query.App = strings.TrimSpace(query.App)
-	query.Level = strings.TrimSpace(query.Level)
-	query.Text = strings.TrimSpace(query.Text)
-
-	if query.Limit <= 0 {
-		query.Limit = 50
-	}
-	if query.Limit > 500 {
-		query.Limit = 500
-	}
-	if query.Offset < 0 {
-		query.Offset = 0
-	}
-
-	return query
-}
-
 func matchesQuery(entry Entry, query LogQuery) bool {
 	if query.App != "" && !strings.EqualFold(entry.Record.App, query.App) {
 		return false
@@ -617,43 +604,6 @@ func matchesQuery(entry Entry, query LogQuery) bool {
 	}, " "))
 
 	return strings.Contains(haystack, strings.ToLower(query.Text))
-}
-
-func parseLogQuery(r *http.Request) (LogQuery, error) {
-	values := r.URL.Query()
-
-	limit := 50
-	if raw := strings.TrimSpace(values.Get("limit")); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			return LogQuery{}, fmt.Errorf("invalid limit")
-		}
-		limit = parsed
-	}
-
-	offset := 0
-	if raw := strings.TrimSpace(values.Get("offset")); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			return LogQuery{}, fmt.Errorf("invalid offset")
-		}
-		offset = parsed
-	}
-
-	text := strings.TrimSpace(values.Get("q"))
-	if text == "" {
-		text = strings.TrimSpace(values.Get("text"))
-	}
-
-	query := normalizeLogQuery(LogQuery{
-		App:    values.Get("app"),
-		Level:  values.Get("level"),
-		Text:   text,
-		Limit:  limit,
-		Offset: offset,
-	})
-
-	return query, nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -746,7 +696,7 @@ func main() {
 				"prevHash":  entry.PrevHash,
 			})
 		case http.MethodGet:
-			query, err := parseLogQuery(r)
+			query, err := parseLogQuery(r, cfg.Query)
 			if err != nil {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 				return
@@ -765,7 +715,7 @@ func main() {
 	})
 
 	mux.HandleFunc("/v1/logs/search", withMethod(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
-		query, err := parseLogQuery(r)
+		query, err := parseLogQuery(r, cfg.Query)
 		if err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
