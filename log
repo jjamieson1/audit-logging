@@ -21,3 +21,5 @@ exit status 1
 signal: terminated
 2026/09/01 16:31:26 failed to initialize postgres store: pq: no pg_hba.conf entry for host "10.0.1.172", user "audit", database "audit", no encryption
 exit status 1
+2026/09/02 12:06:44 storage backend: postgres
+2026/09/02 12:06:44 audit-logging listening on :8090

@@ -1,0 +1,6 @@
+=== stderr ===
+[90m2:57PM[0m [32mINF[0m [1m27 commits scanned.[0m
+[90m2:57PM[0m [32mINF[0m [1mscanned ~426436 bytes (426.44 KB) in 240ms[0m
+[90m2:57PM[0m [32mINF[0m [1mno leaks found[0m
+
+=== stdout ===

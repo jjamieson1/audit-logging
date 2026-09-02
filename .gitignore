@@ -1,3 +1,5 @@
 data/
 build/
 cmd/log-forwarder/log-forwarder
+log
+audit.pid

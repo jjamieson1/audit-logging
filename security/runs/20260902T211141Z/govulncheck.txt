@@ -1,0 +1,250 @@
+=== Symbol Results ===
+
+Vulnerability #1: GO-2026-6218
+    Avoid quadratic complexity in resolvePath in net/url
+  More info: https://pkg.go.dev/vuln/GO-2026-6218
+  Standard library
+    Found in: net/url@go1.25.5
+    Fixed in: net/url@go1.25.13
+    Example traces found:
+      #1: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do, which eventually calls url.URL.Parse
+
+Vulnerability #2: GO-2026-6091
+    Fix Javascript regexp context tracking in html/template
+  More info: https://pkg.go.dev/vuln/GO-2026-6091
+  Standard library
+    Found in: html/template@go1.25.5
+    Fixed in: html/template@go1.25.13
+    Example traces found:
+      #1: cmd/security-dashboard/render.go:66:24: security.render calls template.Template.Execute
+
+Vulnerability #3: GO-2026-6090
+    Limit handshake messages we are willing to accept post-handshake in
+    crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-6090
+  Standard library
+    Found in: crypto/tls@go1.25.5
+    Fixed in: crypto/tls@go1.25.13
+    Example traces found:
+      #1: cmd/server/main.go:741:2: server.main calls sql.DB.Close, which eventually calls tls.Conn.Handshake
+      #2: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls tls.Conn.HandshakeContext
+      #3: clients/go-lib/client.go:139:34: lib.Client.WriteLog calls io.ReadAll, which eventually calls tls.Conn.Read
+      #4: cmd/security-dashboard/main.go:255:13: security.main calls fmt.Printf, which eventually calls tls.Conn.Write
+      #5: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do, which eventually calls tls.Dialer.DialContext
+
+Vulnerability #4: GO-2026-6089
+    Apply ReadHeaderTimeout when doing unencrypted HTTP/2 check in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6089
+  Standard library
+    Found in: net/http@go1.25.5
+    Fixed in: net/http@go1.25.13
+    Example traces found:
+      #1: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe
+
+Vulnerability #5: GO-2026-5972
+    Enforce maximum recursion depth in encoding/asn1
+  More info: https://pkg.go.dev/vuln/GO-2026-5972
+  Standard library
+    Found in: encoding/asn1@go1.25.5
+    Fixed in: encoding/asn1@go1.25.13
+    Example traces found:
+      #1: clients/go-lib/client.go:140:22: lib.Client.WriteLog calls http.cancelTimerBody.Close, which eventually calls asn1.Unmarshal
+
+Vulnerability #6: GO-2026-5856
+    Invoking Encrypted Client Hello privacy leak in crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-5856
+  Standard library
+    Found in: crypto/tls@go1.25.5
+    Fixed in: crypto/tls@go1.25.12
+    Example traces found:
+      #1: cmd/server/main.go:741:2: server.main calls sql.DB.Close, which eventually calls tls.Conn.Handshake
+      #2: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls tls.Conn.HandshakeContext
+      #3: clients/go-lib/client.go:139:34: lib.Client.WriteLog calls io.ReadAll, which eventually calls tls.Conn.Read
+      #4: cmd/security-dashboard/main.go:255:13: security.main calls fmt.Printf, which eventually calls tls.Conn.Write
+      #5: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do, which eventually calls tls.Dialer.DialContext
+
+Vulnerability #7: GO-2026-5039
+    Arbitrary inputs are included in errors without any escaping in
+    net/textproto
+  More info: https://pkg.go.dev/vuln/GO-2026-5039
+  Standard library
+    Found in: net/textproto@go1.25.5
+    Fixed in: net/textproto@go1.25.11
+    Example traces found:
+      #1: clients/go-lib/client.go:139:34: lib.Client.WriteLog calls io.ReadAll, which eventually calls textproto.Reader.ReadMIMEHeader
+
+Vulnerability #8: GO-2026-5037
+    Inefficient candidate hostname parsing in crypto/x509
+  More info: https://pkg.go.dev/vuln/GO-2026-5037
+  Standard library
+    Found in: crypto/x509@go1.25.5
+    Fixed in: crypto/x509@go1.25.11
+    Example traces found:
+      #1: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls x509.Certificate.Verify
+      #2: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls x509.Certificate.VerifyHostname
+      #3: clients/go-lib/client.go:82:35: lib.Client.WriteLog calls fmt.Errorf, which eventually calls x509.HostnameError.Error
+
+Vulnerability #9: GO-2026-5026
+    Invoking failure to reject ASCII-only Punycode-encoded labels in
+    golang.org/x/net/idna
+  More info: https://pkg.go.dev/vuln/GO-2026-5026
+  Standard library
+    Found in: net/http@go1.25.5
+    Fixed in: net/http@go1.25.13
+    Example traces found:
+      #1: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do
+
+Vulnerability #10: GO-2026-4982
+    Bypass of meta content URL escaping causes XSS in html/template
+  More info: https://pkg.go.dev/vuln/GO-2026-4982
+  Standard library
+    Found in: html/template@go1.25.5
+    Fixed in: html/template@go1.25.10
+    Example traces found:
+      #1: cmd/security-dashboard/render.go:66:24: security.render calls template.Template.Execute
+
+Vulnerability #11: GO-2026-4980
+    Escaper bypass leads to XSS in html/template
+  More info: https://pkg.go.dev/vuln/GO-2026-4980
+  Standard library
+    Found in: html/template@go1.25.5
+    Fixed in: html/template@go1.25.10
+    Example traces found:
+      #1: cmd/security-dashboard/render.go:66:24: security.render calls template.Template.Execute
+
+Vulnerability #12: GO-2026-4971
+    Panic in Dial and LookupPort when handling NUL byte on Windows in net
+  More info: https://pkg.go.dev/vuln/GO-2026-4971
+  Standard library
+    Found in: net@go1.25.5
+    Fixed in: net@go1.25.10
+    Example traces found:
+      #1: cmd/server/main.go:741:2: server.main calls sql.DB.Close, which eventually calls net.Dialer.Dial
+      #2: cmd/server/main.go:741:2: server.main calls sql.DB.Close, which eventually calls net.Dialer.DialContext
+      #3: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which calls net.Listen
+
+Vulnerability #13: GO-2026-4947
+    Unexpected work during chain building in crypto/x509
+  More info: https://pkg.go.dev/vuln/GO-2026-4947
+  Standard library
+    Found in: crypto/x509@go1.25.5
+    Fixed in: crypto/x509@go1.25.9
+    Example traces found:
+      #1: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls x509.Certificate.Verify
+
+Vulnerability #14: GO-2026-4946
+    Inefficient policy validation in crypto/x509
+  More info: https://pkg.go.dev/vuln/GO-2026-4946
+  Standard library
+    Found in: crypto/x509@go1.25.5
+    Fixed in: crypto/x509@go1.25.9
+    Example traces found:
+      #1: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls x509.Certificate.Verify
+
+Vulnerability #15: GO-2026-4918
+    Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in
+    net/http/internal/http2 in golang.org/x/net
+  More info: https://pkg.go.dev/vuln/GO-2026-4918
+  Standard library
+    Found in: net/http@go1.25.5
+    Fixed in: net/http@go1.25.10
+    Example traces found:
+      #1: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do
+
+Vulnerability #16: GO-2026-4870
+    Unauthenticated TLS 1.3 KeyUpdate record can cause persistent connection
+    retention and DoS in crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-4870
+  Standard library
+    Found in: crypto/tls@go1.25.5
+    Fixed in: crypto/tls@go1.25.9
+    Example traces found:
+      #1: cmd/server/main.go:741:2: server.main calls sql.DB.Close, which eventually calls tls.Conn.Handshake
+      #2: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls tls.Conn.HandshakeContext
+      #3: clients/go-lib/client.go:139:34: lib.Client.WriteLog calls io.ReadAll, which eventually calls tls.Conn.Read
+      #4: cmd/security-dashboard/main.go:255:13: security.main calls fmt.Printf, which eventually calls tls.Conn.Write
+      #5: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do, which eventually calls tls.Dialer.DialContext
+
+Vulnerability #17: GO-2026-4865
+    JsBraceDepth Context Tracking Bugs (XSS) in html/template
+  More info: https://pkg.go.dev/vuln/GO-2026-4865
+  Standard library
+    Found in: html/template@go1.25.5
+    Fixed in: html/template@go1.25.9
+    Example traces found:
+      #1: clients/go-lib/client.go:82:35: lib.Client.WriteLog calls fmt.Errorf, which eventually calls template.Error.Error
+      #2: cmd/security-dashboard/render.go:66:24: security.render calls template.Template.Execute
+      #3: cmd/security-dashboard/render.go:55:41: security.render calls template.Template.Funcs
+      #4: cmd/security-dashboard/render.go:55:54: security.render calls template.Template.Parse
+      #5: clients/go-lib/client.go:82:35: lib.Client.WriteLog calls fmt.Errorf, which eventually calls template.context.String
+
+Vulnerability #18: GO-2026-4603
+    URLs in meta content attribute actions are not escaped in html/template
+  More info: https://pkg.go.dev/vuln/GO-2026-4603
+  Standard library
+    Found in: html/template@go1.25.5
+    Fixed in: html/template@go1.25.8
+    Example traces found:
+      #1: cmd/security-dashboard/render.go:66:24: security.render calls template.Template.Execute
+
+Vulnerability #19: GO-2026-4602
+    FileInfo can escape from a Root in os
+  More info: https://pkg.go.dev/vuln/GO-2026-4602
+  Standard library
+    Found in: os@go1.25.5
+    Fixed in: os@go1.25.8
+    Example traces found:
+      #1: cmd/security-dashboard/init.go:266:22: security.detectStack calls filepath.WalkDir, which eventually calls os.ReadDir
+
+Vulnerability #20: GO-2026-4601
+    Incorrect parsing of IPv6 host literals in net/url
+  More info: https://pkg.go.dev/vuln/GO-2026-4601
+  Standard library
+    Found in: net/url@go1.25.5
+    Fixed in: net/url@go1.25.8
+    Example traces found:
+      #1: clients/go-lib/client.go:120:41: lib.Client.WriteLog calls http.NewRequestWithContext, which calls url.Parse
+      #2: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls url.ParseRequestURI
+      #3: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do, which eventually calls url.URL.Parse
+
+Vulnerability #21: GO-2026-4341
+    Memory exhaustion in query parameter parsing in net/url
+  More info: https://pkg.go.dev/vuln/GO-2026-4341
+  Standard library
+    Found in: net/url@go1.25.5
+    Fixed in: net/url@go1.25.6
+    Example traces found:
+      #1: cmd/server/main.go:737:21: server.main calls sql.Open, which eventually calls url.URL.Query
+
+Vulnerability #22: GO-2026-4340
+    Handshake messages may be processed at the incorrect encryption level in
+    crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-4340
+  Standard library
+    Found in: crypto/tls@go1.25.5
+    Fixed in: crypto/tls@go1.25.6
+    Example traces found:
+      #1: cmd/server/main.go:741:2: server.main calls sql.DB.Close, which eventually calls tls.Conn.Handshake
+      #2: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls tls.Conn.HandshakeContext
+      #3: clients/go-lib/client.go:139:34: lib.Client.WriteLog calls io.ReadAll, which eventually calls tls.Conn.Read
+      #4: cmd/security-dashboard/main.go:255:13: security.main calls fmt.Printf, which eventually calls tls.Conn.Write
+      #5: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do, which eventually calls tls.Dialer.DialContext
+
+Vulnerability #23: GO-2026-4337
+    Unexpected session resumption in crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-4337
+  Standard library
+    Found in: crypto/tls@go1.25.5
+    Fixed in: crypto/tls@go1.25.7
+    Example traces found:
+      #1: cmd/server/main.go:741:2: server.main calls sql.DB.Close, which eventually calls tls.Conn.Handshake
+      #2: cmd/server/main.go:789:33: server.main calls http.Server.ListenAndServe, which eventually calls tls.Conn.HandshakeContext
+      #3: clients/go-lib/client.go:139:34: lib.Client.WriteLog calls io.ReadAll, which eventually calls tls.Conn.Read
+      #4: cmd/security-dashboard/main.go:255:13: security.main calls fmt.Printf, which eventually calls tls.Conn.Write
+      #5: clients/go-lib/client.go:135:30: lib.Client.WriteLog calls http.Client.Do, which eventually calls tls.Dialer.DialContext
+
+Your code is affected by 23 vulnerabilities from the Go standard library.
+This scan also found 4 vulnerabilities in packages you import and 6
+vulnerabilities in modules you require, but your code doesn't appear to call
+these vulnerabilities.
+Use '-show verbose' for more details.

@@ -1,0 +1,119 @@
+{
+  "app": {
+    "name": "audit-logging",
+    "description": "",
+    "repo": "https://github.com/jjamieson1/audit-logging.git",
+    "team": "",
+    "contact": ""
+  },
+  "standards": [],
+  "checks": [
+    {
+      "key": "build",
+      "name": "Compile",
+      "category": "Quality",
+      "tool": "go",
+      "gating": true,
+      "command": "go build ./...",
+      "parser": "exit",
+      "source": "detected"
+    },
+    {
+      "key": "vet",
+      "name": "go vet",
+      "category": "Quality",
+      "tool": "go",
+      "gating": true,
+      "command": "go vet ./...",
+      "parser": "exit",
+      "source": "detected"
+    },
+    {
+      "key": "tests",
+      "name": "Test suite",
+      "category": "Quality",
+      "tool": "go test",
+      "gating": true,
+      "command": "go test ./...",
+      "parser": "gotest",
+      "source": "detected"
+    },
+    {
+      "key": "govulncheck",
+      "name": "Known vulnerabilities (Go)",
+      "category": "Dependencies",
+      "tool": "govulncheck",
+      "gating": true,
+      "command": "govulncheck ./...",
+      "parser": "govulncheck",
+      "installHint": "go install golang.org/x/vuln/cmd/govulncheck@latest",
+      "source": "detected"
+    },
+    {
+      "key": "gosec",
+      "name": "Static analysis (Go)",
+      "category": "SAST",
+      "tool": "gosec",
+      "gating": false,
+      "command": "gosec -fmt=json -quiet ./...",
+      "parser": "gosec-json",
+      "installHint": "go install github.com/securego/gosec/v2/cmd/gosec@latest",
+      "source": "detected"
+    },
+    {
+      "key": "npm-audit-clients-node-producer",
+      "name": "Dependency audit (clients/node-producer)",
+      "category": "Dependencies",
+      "tool": "npm",
+      "gating": false,
+      "command": "npm audit --json",
+      "parser": "npm-audit",
+      "dir": "clients/node-producer",
+      "source": "detected"
+    },
+    {
+      "key": "gitleaks",
+      "name": "Secret scan",
+      "category": "Secrets",
+      "tool": "gitleaks",
+      "gating": false,
+      "command": "gitleaks detect --no-banner --redact",
+      "parser": "gitleaks",
+      "installHint": "brew install gitleaks",
+      "source": "detected"
+    },
+    {
+      "key": "semgrep",
+      "name": "Static analysis (OWASP Top 10)",
+      "category": "SAST",
+      "tool": "semgrep",
+      "gating": false,
+      "command": "semgrep --config p/owasp-top-ten --json --quiet",
+      "parser": "semgrep-json",
+      "installHint": "pipx install semgrep",
+      "source": "detected"
+    },
+    {
+      "key": "sbom",
+      "name": "Software bill of materials",
+      "category": "Supply chain",
+      "tool": "syft",
+      "gating": false,
+      "command": "syft . -o cyclonedx-json",
+      "parser": "exit",
+      "installHint": "brew install syft",
+      "source": "detected"
+    },
+    {
+      "key": "trivy-fs",
+      "name": "Image & config scan",
+      "category": "Infrastructure",
+      "tool": "trivy",
+      "gating": false,
+      "command": "trivy fs --scanners vuln,secret,misconfig --quiet .",
+      "parser": "exit",
+      "installHint": "brew install trivy",
+      "source": "detected"
+    }
+  ]
+}
