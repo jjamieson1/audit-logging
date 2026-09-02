@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-.PHONY: up down test logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty forwarder-validate forwarder-run
+.PHONY: up down test test-node logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty forwarder-validate forwarder-run
 
 up:
 	docker compose up --build
@@ -10,6 +10,9 @@ down:
 
 test:
 	go test ./...
+
+test-node:
+	node --test clients/node-lib/*.test.mjs
 
 logs:
 	docker compose logs -f

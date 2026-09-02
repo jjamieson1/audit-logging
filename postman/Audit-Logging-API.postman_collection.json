@@ -20,14 +20,29 @@
     {
       "key": "message",
       "value": "event created from postman"
+    },
+    {
+      "key": "authToken",
+      "value": "alog_replace_me"
+    },
+    {
+      "key": "nextCursor",
+      "value": ""
     }
   ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{authToken}}", "type": "string" }
+    ]
+  },
   "item": [
     {
       "name": "Health",
       "request": {
         "method": "GET",
         "header": [],
+        "auth": { "type": "noauth" },
         "url": {
           "raw": "{{baseUrl}}/v1/health",
           "host": [
@@ -74,7 +89,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/v1/logs?limit=50&offset=0",
+          "raw": "{{baseUrl}}/v1/logs?limit=50&cursor={{nextCursor}}",
           "host": [
             "{{baseUrl}}"
           ],
@@ -88,12 +103,27 @@
               "value": "50"
             },
             {
-              "key": "offset",
-              "value": "0"
+              "key": "cursor",
+              "value": "{{nextCursor}}"
             }
           ]
         }
       },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "// Store the cursor so re-sending this request fetches the next page.",
+              "// A null cursor means the last page; clear it so the next send restarts.",
+              "pm.collectionVariables.set('nextCursor', body.nextCursor || '');",
+              "pm.test('request was authorized', () => pm.response.code !== 401);"
+            ]
+          }
+        }
+      ],
       "response": []
     },
     {
@@ -134,7 +164,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/v1/logs/search?q=timeout&limit=10&offset=0",
+          "raw": "{{baseUrl}}/v1/logs/search?q=timeout&limit=10",
           "host": [
             "{{baseUrl}}"
           ],
@@ -151,10 +181,6 @@
             {
               "key": "limit",
               "value": "10"
-            },
-            {
-              "key": "offset",
-              "value": "0"
             }
           ]
         }
