@@ -85,7 +85,12 @@ type LogQueryResult struct {
 	// Total and Offset are pointers so an absent value serialises as absent.
 	// A plain int would emit "total": 0 on every uncounted response, which
 	// reads as an empty result set.
-	Total  *int `json:"total,omitempty"`
+	Total *int `json:"total,omitempty"`
+	// Offset is populated only when query.Offset > 0 (see FileStore.QueryLogs
+	// and PostgresStore.QueryLogs), so an explicit offset=0 request gets no
+	// "offset" field back, same as no offset at all. This is deliberate: an
+	// offset of zero is indistinguishable from "unset" for echo purposes, and
+	// pinned by TestFileStoreQueryLogsOffsetZeroOmitsOffsetField.
 	Offset *int `json:"offset,omitempty"`
 }
 
@@ -301,6 +306,8 @@ func (s *FileStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 	if query.WantTotal {
 		result.Total = &total
 	}
+	// offset=0 deliberately omits the field; see the Offset comment on
+	// LogQueryResult.
 	if query.Offset > 0 {
 		offset := query.Offset
 		result.Offset = &offset

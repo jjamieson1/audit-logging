@@ -450,9 +450,12 @@ count is an exact multiple of the page size.
 environment variable, skipped with `t.Skip` when unset so `make test` stays
 green offline. Covers schema creation, register, authenticate, rotate
 invalidating the previous token, revoke, and list. The same gated suite covers
-cursor paging against real SQL -- including that the composite index exists and
-that a client-scoped page returns identical results to the file backend for the
-same seeded data.
+cursor paging against real SQL -- that the composite index exists, that a
+client-scoped query for a client owning nothing returns zero rows, and that an
+unscoped query returns rows including the legacy unattributed ones. It does not
+compare a client-scoped page byte-for-byte against the file backend on seeded
+data: `audit_log_entries` is a live append-only tamper-evident chain, and this
+suite does not write to it.
 
 ## Documentation deliverables
 

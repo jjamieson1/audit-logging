@@ -68,7 +68,7 @@ func main() {
 		StartMetricsServer(ctx, log.Default(), cfg.MetricsPort, metrics)
 	}
 	go StartMetricsReporter(ctx, log.Default(), time.Duration(cfg.MetricsReportIntervalMS)*time.Millisecond, metrics)
-	go StartIntegrityVerifier(ctx, log.Default(), cfg.ServerURL, time.Duration(cfg.RequestTimeoutMS)*time.Millisecond, time.Duration(cfg.VerifyIntervalMS)*time.Millisecond)
+	go StartIntegrityVerifier(ctx, log.Default(), cfg.ServerURL, cfg.AuthBearerToken, time.Duration(cfg.RequestTimeoutMS)*time.Millisecond, time.Duration(cfg.VerifyIntervalMS)*time.Millisecond)
 
 	follower := NewFollower(cfg, log.Default())
 	err = follower.Run(ctx, func(event TailEvent) error {
