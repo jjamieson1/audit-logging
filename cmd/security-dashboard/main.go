@@ -247,13 +247,30 @@ func main() {
 		return
 	}
 
+	// gatingFailures is reported through the process exit code at the very end,
+	// after the dashboard has been rendered. Callers that gate on this tool --
+	// a pre-push hook, CI -- need a non-zero exit, but they also need the
+	// rendered page and badge to reflect the failing run, so the render must
+	// happen first.
+	gatingFailures := 0
+
 	if cmd == "scan" {
 		run := performScan(cfg, dir, trigger)
 		if err := saveRun(dir, run); err != nil {
 			fatal(err)
 		}
+		gatingFailures = run.Totals.GatingFail
 		fmt.Printf("security-dashboard: recorded run %s (%d pass, %d fail, %d warn, %d skipped)\n",
 			run.ID, run.Totals.Pass, run.Totals.Fail, run.Totals.Warn, run.Totals.Skipped)
+		if gatingFailures > 0 {
+			// Name the offending checks: "1 gating check failed" sends a reader
+			// to the JSON, whereas naming govulncheck sends them to the fix.
+			for _, c := range run.Checks {
+				if c.Gating && c.Status == "fail" {
+					fmt.Printf("security-dashboard: GATING FAILURE %s (%s) — %s\n", c.Key, c.Name, c.Summary)
+				}
+			}
+		}
 	}
 
 	if err := render(dir, cfg); err != nil {
@@ -263,6 +280,13 @@ func main() {
 	// Surface the manual programme in the same output as the scan, so a lapsed
 	// schedule is visible in CI logs and not only on the page.
 	fmt.Printf("security-dashboard: manual tasks — %s\n", summarizeTasks(loadTasks(dir).Tasks, time.Now()).Line)
+
+	// Non-zero exit last, so everything above still ran and the dashboard on
+	// disk matches the run that failed.
+	if gatingFailures > 0 {
+		fmt.Fprintf(os.Stderr, "security-dashboard: %d gating check(s) failed\n", gatingFailures)
+		os.Exit(1)
+	}
 }
 
 // runTask handles the `task` subcommand:

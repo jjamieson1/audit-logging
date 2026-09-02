@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-.PHONY: up down test test-node logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty forwarder-validate forwarder-run
+.PHONY: hooks security-scan up down test test-node logs ps restart clean health verify sample-log smoke retry-sim retry-sim-fast retry-sim-slow retry-sim-bursty forwarder-validate forwarder-run
 
 up:
 	docker compose up --build
@@ -13,6 +13,15 @@ test:
 
 test-node:
 	node --test clients/node-lib/*.test.mjs
+
+# One-time per clone. Git does not share hooks, so each checkout must be
+# pointed at the tracked .githooks directory.
+hooks:
+	git config core.hooksPath .githooks
+	@echo "pre-push hook enabled (git config core.hooksPath .githooks)"
+
+security-scan:
+	go run ./cmd/security-dashboard scan
 
 logs:
 	docker compose logs -f
