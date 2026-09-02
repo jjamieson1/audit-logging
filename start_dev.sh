@@ -13,7 +13,7 @@ DB_PASSWORD="${DB_PASSWORD:-audit}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 
-export PORT="${PORT:-8080}"
+export PORT="${PORT:-8090}"
 export STORAGE_BACKEND="${STORAGE_BACKEND:-postgres}"
 export DATABASE_URL="${DATABASE_URL:-postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/audit?sslmode=disable}"
 if [[ -f "$PID_FILE" ]]; then
