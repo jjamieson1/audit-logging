@@ -175,6 +175,8 @@ func NewFileStore(path string) (*FileStore, error) {
 	}
 
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		// #nosec G306 -- 0640 rather than gosec's 0600 is deliberate; the forwarder
+		// reads this log as a separate service account in the same group.
 		if err := os.WriteFile(path, []byte{}, 0o640); err != nil {
 			return nil, err
 		}
@@ -226,6 +228,7 @@ func (s *FileStore) Append(record LogRecord) (Entry, error) {
 		return Entry{}, err
 	}
 
+	// #nosec G302 -- 0640 is deliberate; see NewFileStore.
 	file, err := os.OpenFile(s.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o640)
 	if err != nil {
 		return Entry{}, err
@@ -482,6 +485,9 @@ VALUES ($1, $2, $3, $4, $5, $6)
 		return Entry{}, err
 	}
 
+	// #nosec G115 -- nextIndex is lastIndex+1 where lastIndex is
+	// COALESCE(MAX(entry_index), 0), so it is always >= 1 and cannot be
+	// reinterpreted by the conversion.
 	return Entry{
 		Index:       uint64(nextIndex),
 		Timestamp:   timestamp,
@@ -598,6 +604,8 @@ func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 	listArgs := append([]any{}, filterArgs...)
 	listWhere := filterWhere
 	if query.AfterIndex > 0 {
+		// #nosec G115 -- decodeCursor rejects anything above math.MaxInt64, so this
+		// conversion cannot wrap. That bound exists because of this line.
 		listArgs = append(listArgs, int64(query.AfterIndex))
 		clause := fmt.Sprintf("entry_index > $%d", len(listArgs))
 		if listWhere == "" {
@@ -617,6 +625,9 @@ func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 		offsetClause = fmt.Sprintf(" OFFSET $%d", len(listArgs))
 	}
 
+	// #nosec G202 -- concatenation builds clause STRUCTURE and $N placeholder
+	// numbers only. Every caller-supplied value goes through listArgs and is
+	// bound by the driver; no user input reaches this string.
 	listQuery := "SELECT entry_index, ts, prev_hash, payload_hash, entry_hash, record_json FROM audit_log_entries" +
 		listWhere + " ORDER BY entry_index ASC" + limitClause + offsetClause
 
@@ -639,6 +650,10 @@ func (s *PostgresStore) QueryLogs(query LogQuery) (LogQueryResult, error) {
 			return LogQueryResult{}, err
 		}
 
+		// #nosec G115 -- entry_index is only ever written by Append as a
+		// positive, monotonically increasing value. A negative here would mean
+		// the table was written outside this service, which Verify() detects
+		// and reports as a broken chain.
 		items = append(items, Entry{
 			Index:       uint64(dbIndex),
 			Timestamp:   timestamp,

@@ -40,6 +40,8 @@ func LoadConfig(path string) (Config, error) {
 		return Config{}, errors.New("config path is required")
 	}
 
+	// #nosec G304 -- the config path comes from this process's own -config
+	// flag. A forwarder that cannot read an operator-chosen config is useless.
 	file, err := os.Open(path)
 	if err != nil {
 		return Config{}, fmt.Errorf("open config: %w", err)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -135,7 +136,10 @@ func TestParseLogQueryOffsetCeiling(t *testing.T) {
 }
 
 func TestCursorRoundTrip(t *testing.T) {
-	for _, index := range []uint64{1, 2, 50, 1427, 18446744073709551615} {
+	// The upper bound is math.MaxInt64, not math.MaxUint64: entry_index is a
+	// Postgres BIGINT, and decodeCursor rejects anything that would wrap
+	// negative when bound as an int64.
+	for _, index := range []uint64{1, 2, 50, 1427, uint64(math.MaxInt64)} {
 		encoded := encodeCursor(index)
 		decoded, err := decodeCursor(encoded)
 		if err != nil {
@@ -151,6 +155,24 @@ func TestEncodeCursorIsOpaqueAndStable(t *testing.T) {
 	// Locked in so a future format change is a deliberate, visible edit.
 	if got, want := encodeCursor(1427), "djE6MTQyNw"; got != want {
 		t.Fatalf("encodeCursor(1427) = %q, want %q", got, want)
+	}
+}
+
+func TestDecodeCursorRejectsValuesBeyondInt64(t *testing.T) {
+	// entry_index is a Postgres BIGINT and the query binds the cursor as an
+	// int64. A cursor above math.MaxInt64 would wrap negative, making the
+	// predicate "entry_index > <negative>" match every row -- so the caller
+	// would silently receive page one again instead of an error, and a paging
+	// loop would never terminate.
+	tooBig := encodeCursor(uint64(math.MaxInt64) + 1)
+	if _, err := decodeCursor(tooBig); err == nil {
+		t.Fatal("decodeCursor accepted a value above math.MaxInt64, which wraps negative when bound as int64")
+	}
+
+	// The boundary itself must still be accepted.
+	ok := encodeCursor(uint64(math.MaxInt64))
+	if _, err := decodeCursor(ok); err != nil {
+		t.Fatalf("decodeCursor rejected math.MaxInt64, which is a valid entry_index: %v", err)
 	}
 }
 

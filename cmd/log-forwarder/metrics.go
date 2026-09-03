@@ -114,6 +114,9 @@ func StartMetricsServer(ctx context.Context, logger *log.Logger, port int, metri
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	// #nosec G118 -- context.Background is correct here: this goroutine builds
+	// the SHUTDOWN context, which must outlive the request context that just
+	// got cancelled, or Shutdown would return before draining connections.
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

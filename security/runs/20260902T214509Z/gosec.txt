@@ -1,0 +1,677 @@
+{
+	"Golang errors": {},
+	"Issues": [
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/tasks.go",
+			"code": "278: \t}\n279: \treturn os.WriteFile(path, append(out, '\\n'), 0o644)\n280: }\n",
+			"line": "279",
+			"column": "21",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/tasks.go",
+			"code": "242: \tpath := filepath.Join(dir, \"tasks.json\")\n243: \tb, err := os.ReadFile(path)\n244: \tif err != nil {\n",
+			"line": "243",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/render.go",
+			"code": "58: \t}\n59: \tf, err := os.Create(filepath.Join(dir, \"dashboard.html\"))\n60: \tif err != nil {\n",
+			"line": "59",
+			"column": "21",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "425: \tfor _, m := range matches {\n426: \t\tb, err := os.ReadFile(m)\n427: \t\tif err != nil {\n",
+			"line": "426",
+			"column": "24",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "417: \t}\n418: \treturn os.WriteFile(filepath.Join(runsDir, run.ID+\".json\"), append(b, '\\n'), 0o644)\n419: }\n",
+			"line": "418",
+			"column": "21",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "410: \trunsDir := filepath.Join(dir, \"runs\")\n411: \tif err := os.MkdirAll(runsDir, 0o755); err != nil {\n412: \t\treturn err\n",
+			"line": "411",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "402: \tvar t Tasks\n403: \tif b, err := os.ReadFile(filepath.Join(dir, \"tasks.json\")); err == nil {\n404: \t\t_ = json.Unmarshal(b, \u0026t)\n",
+			"line": "403",
+			"column": "26",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "390: \tvar cfg Config\n391: \tb, err := os.ReadFile(filepath.Join(dir, \"config.json\"))\n392: \tif err != nil {\n",
+			"line": "391",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "681: \tbuf.WriteString(\"}\\n\")\n682: \treturn os.WriteFile(path, buf.Bytes(), 0o644)\n683: }\n",
+			"line": "682",
+			"column": "21",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "535: \t\t}\n536: \t\tif st, err := os.Stat(filepath.Join(root, c.Dir)); err != nil || !st.IsDir() {\n537: \t\t\tf = append(f, finding{\"fail\", fmt.Sprintf(\"check %q runs in %q, which does not exist\", c.Key, c.Dir)})\n",
+			"line": "536",
+			"column": "24",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "410: func markdownTitle(path, fallback string) string {\n411: \tb, err := os.ReadFile(path)\n412: \tif err != nil {\n",
+			"line": "411",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "378: func jsonField(path, field string) string {\n379: \tb, err := os.ReadFile(path)\n380: \tif err != nil {\n",
+			"line": "379",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "327: \t} {\n328: \t\tif _, err := os.Stat(filepath.Join(root, p)); err == nil {\n329: \t\t\ts.manualDoc = filepath.ToSlash(p)\n",
+			"line": "328",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "265: \n266: \t_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {\n267: \t\tif err != nil {\n",
+			"line": "266",
+			"column": "22",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "182: \t\t}\n183: \t\tif err := os.WriteFile(tasksPath, append(b, '\\n'), 0o644); err != nil {\n184: \t\t\treturn err\n",
+			"line": "183",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "169: \n170: \tif err := os.MkdirAll(dir, 0o755); err != nil {\n171: \t\treturn err\n",
+			"line": "170",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "157: \ttasksPath := filepath.Join(dir, \"tasks.json\")\n158: \t_, tasksErr := os.Stat(tasksPath)\n159: \twriteTasks := os.IsNotExist(tasksErr)\n",
+			"line": "158",
+			"column": "24",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "70: \texisting := Config{}\n71: \tif b, err := os.ReadFile(cfgPath); err == nil {\n72: \t\tif opts.force {\n",
+			"line": "71",
+			"column": "26",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/checks.go",
+			"code": "101: \treportName := def.Key + \".txt\"\n102: \t_ = os.WriteFile(filepath.Join(runDir, reportName), report.Bytes(), 0o644)\n103: \t// Linked relative to security/ so the dashboard opens reports locally.\n",
+			"line": "102",
+			"column": "18",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/checks.go",
+			"code": "29: \trunDir := filepath.Join(dir, \"runs\", run.ID)\n30: \t_ = os.MkdirAll(runDir, 0o755)\n31: \n",
+			"line": "30",
+			"column": "17",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G703",
+			"details": "Path traversal via taint analysis",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/badge.go",
+			"code": "60: \t)\n61: \treturn os.WriteFile(filepath.Join(dir, \"badge.svg\"), []byte(svg), 0o644)\n62: }\n",
+			"line": "61",
+			"column": "21",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "78",
+				"url": "https://cwe.mitre.org/data/definitions/78.html"
+			},
+			"rule_id": "G204",
+			"details": "Subprocess launched with variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/checks.go",
+			"code": "502: func gitOut(args ...string) string {\n503: \tout, err := exec.Command(\"git\", args...).Output()\n504: \tif err != nil {\n",
+			"line": "503",
+			"column": "14",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "78",
+				"url": "https://cwe.mitre.org/data/definitions/78.html"
+			},
+			"rule_id": "G204",
+			"details": "Subprocess launched with a potential tainted input or cmd arguments",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/checks.go",
+			"code": "78: \tstart := time.Now()\n79: \tcmd := exec.Command(\"sh\", \"-c\", def.Command)\n80: \tcmd.Dir = def.Dir\n",
+			"line": "79",
+			"column": "9",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/tasks.go",
+			"code": "242: \tpath := filepath.Join(dir, \"tasks.json\")\n243: \tb, err := os.ReadFile(path)\n244: \tif err != nil {\n",
+			"line": "243",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/render.go",
+			"code": "58: \t}\n59: \tf, err := os.Create(filepath.Join(dir, \"dashboard.html\"))\n60: \tif err != nil {\n",
+			"line": "59",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "425: \tfor _, m := range matches {\n426: \t\tb, err := os.ReadFile(m)\n427: \t\tif err != nil {\n",
+			"line": "426",
+			"column": "13",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "402: \tvar t Tasks\n403: \tif b, err := os.ReadFile(filepath.Join(dir, \"tasks.json\")); err == nil {\n404: \t\t_ = json.Unmarshal(b, \u0026t)\n",
+			"line": "403",
+			"column": "15",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "390: \tvar cfg Config\n391: \tb, err := os.ReadFile(filepath.Join(dir, \"config.json\"))\n392: \tif err != nil {\n",
+			"line": "391",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "410: func markdownTitle(path, fallback string) string {\n411: \tb, err := os.ReadFile(path)\n412: \tif err != nil {\n",
+			"line": "411",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "378: func jsonField(path, field string) string {\n379: \tb, err := os.ReadFile(path)\n380: \tif err != nil {\n",
+			"line": "379",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "351: func moduleName(goMod string) string {\n352: \tb, err := os.ReadFile(goMod)\n353: \tif err != nil {\n",
+			"line": "352",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "70: \texisting := Config{}\n71: \tif b, err := os.ReadFile(cfgPath); err == nil {\n72: \t\tif opts.force {\n",
+			"line": "71",
+			"column": "15",
+			"nosec": false,
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G301",
+			"details": "Expect directory permissions to be 0750 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "410: \trunsDir := filepath.Join(dir, \"runs\")\n411: \tif err := os.MkdirAll(runsDir, 0o755); err != nil {\n412: \t\treturn err\n",
+			"line": "411",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G301",
+			"details": "Expect directory permissions to be 0750 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "169: \n170: \tif err := os.MkdirAll(dir, 0o755); err != nil {\n171: \t\treturn err\n",
+			"line": "170",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G301",
+			"details": "Expect directory permissions to be 0750 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/checks.go",
+			"code": "29: \trunDir := filepath.Join(dir, \"runs\", run.ID)\n30: \t_ = os.MkdirAll(runDir, 0o755)\n31: \n",
+			"line": "30",
+			"column": "6",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G306",
+			"details": "Expect WriteFile permissions to be 0600 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/tasks.go",
+			"code": "278: \t}\n279: \treturn os.WriteFile(path, append(out, '\\n'), 0o644)\n280: }\n",
+			"line": "279",
+			"column": "9",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G306",
+			"details": "Expect WriteFile permissions to be 0600 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/main.go",
+			"code": "417: \t}\n418: \treturn os.WriteFile(filepath.Join(runsDir, run.ID+\".json\"), append(b, '\\n'), 0o644)\n419: }\n",
+			"line": "418",
+			"column": "9",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G306",
+			"details": "Expect WriteFile permissions to be 0600 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "681: \tbuf.WriteString(\"}\\n\")\n682: \treturn os.WriteFile(path, buf.Bytes(), 0o644)\n683: }\n",
+			"line": "682",
+			"column": "9",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G306",
+			"details": "Expect WriteFile permissions to be 0600 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/init.go",
+			"code": "182: \t\t}\n183: \t\tif err := os.WriteFile(tasksPath, append(b, '\\n'), 0o644); err != nil {\n184: \t\t\treturn err\n",
+			"line": "183",
+			"column": "13",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G306",
+			"details": "Expect WriteFile permissions to be 0600 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/checks.go",
+			"code": "101: \treportName := def.Key + \".txt\"\n102: \t_ = os.WriteFile(filepath.Join(runDir, reportName), report.Bytes(), 0o644)\n103: \t// Linked relative to security/ so the dashboard opens reports locally.\n",
+			"line": "102",
+			"column": "6",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G306",
+			"details": "Expect WriteFile permissions to be 0600 or less",
+			"file": "/Users/jjamieso/developement/audit-logging/cmd/security-dashboard/badge.go",
+			"code": "60: \t)\n61: \treturn os.WriteFile(filepath.Join(dir, \"badge.svg\"), []byte(svg), 0o644)\n62: }\n",
+			"line": "61",
+			"column": "9",
+			"nosec": false,
+			"suppressions": null
+		}
+	],
+	"Stats": {
+		"files": 23,
+		"lines": 5943,
+		"nosec": 16,
+		"found": 41
+	},
+	"GosecVersion": "dev"
+}
