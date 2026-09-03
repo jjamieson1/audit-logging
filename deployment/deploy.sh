@@ -16,7 +16,8 @@ ENV_DIR="${ENV_DIR:-/etc/audit}"
 SERVICE_NAME="${SERVICE_NAME:-audit}"
 SERVICE_USER="${SERVICE_USER:-audit}"
 BINARY_NAME="${BINARY_NAME:-audit}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8080/v1/health}"
+# HEALTH_URL is resolved after REMOTE_HOST is known, from the port the host
+# is actually configured with. See below.
 HEALTH_RETRIES="${HEALTH_RETRIES:-15}"
 
 if [[ $# -ne 1 ]]; then
@@ -26,6 +27,22 @@ if [[ $# -ne 1 ]]; then
 fi
 
 REMOTE_HOST="$1"
+
+# Resolve the health URL from the host's own PORT rather than assuming 8080.
+# A host configured with a different PORT would otherwise fail a health check
+# against a port nothing listens on -- reporting a failed deploy and advising a
+# rollback, when the deploy in fact succeeded. An explicit HEALTH_URL still wins.
+if [[ -z "${HEALTH_URL:-}" ]]; then
+    remote_port="$(ssh -n "$REMOTE_HOST" \
+        "sudo grep -E '^PORT=' '$ENV_DIR/audit.env' 2>/dev/null | tail -1 | cut -d= -f2" \
+        2>/dev/null | tr -d '[:space:]')"
+    # Fall back to the service's own default when PORT is unset or unreadable.
+    if [[ ! "$remote_port" =~ ^[0-9]+$ ]]; then
+        remote_port=8080
+    fi
+    HEALTH_URL="http://127.0.0.1:$remote_port/v1/health"
+    echo "Health check target: $HEALTH_URL (from $REMOTE_HOST:$ENV_DIR/audit.env)"
+fi
 BUILD_DIR="$REPO_ROOT/build"
 BINARY_PATH="$BUILD_DIR/$BINARY_NAME"
 

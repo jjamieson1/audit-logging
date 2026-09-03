@@ -3,7 +3,8 @@
 Deploys the audit logging service (`cmd/server`) to an Ubuntu 24.04 host over SSH.
 
 The service runs under systemd as a dedicated `audit` user, stores entries in a
-local PostgreSQL 16 database, and listens on `127.0.0.1:8080` only.
+local PostgreSQL 16 database, and listens on `127.0.0.1` only, on the port in
+`/etc/audit/audit.env` (`PORT`, default `8080`).
 
 ## Layout on the server
 
@@ -40,6 +41,16 @@ leave firewall configuration alone.
 Builds a static `linux/amd64` binary, copies it over, keeps the outgoing build
 as `audit.prev`, restarts the service, and polls `/v1/health` on the server. If
 the health check fails it prints the last 50 journal lines and exits non-zero.
+
+The health check target is derived from the host's own `PORT` in
+`/etc/audit/audit.env`, falling back to `8080` when that is unset. A host
+running on a non-default port would otherwise fail a health check against a
+port nothing listens on, reporting a failed deploy and advising a rollback when
+the deploy had in fact succeeded. Override with `HEALTH_URL=... ./deployment/deploy.sh <host>`.
+
+Note the health endpoint is the only unauthenticated one, so a passing health
+check proves the process is up -- not that authentication is working. After a
+deploy that changes anything about auth, check an authenticated endpoint too.
 
 ## Reaching the API
 
