@@ -35,7 +35,7 @@ import (
 )
 
 func main() {
-	client := auditclient.New("http://localhost:8080/v1/logs", nil)
+	client := auditclient.New("http://localhost:8090/v1/logs", nil)
 	client.AuthToken = os.Getenv("AUDIT_TOKEN")
 	client.Retry = auditclient.RetryConfig{
 		MaxAttempts:    3,
@@ -72,7 +72,7 @@ Example usage:
 import { createAuditLogger } from "./clients/node-lib/index.mjs";
 
 const client = createAuditLogger({
-  endpoint: "http://localhost:8080/v1/logs",
+  endpoint: "http://localhost:8090/v1/logs",
   authToken: process.env.AUDIT_TOKEN,
   retry: {
     maxAttempts: 3,
@@ -119,7 +119,7 @@ node ./clients/node-producer/index.mjs
 
 Environment variables for both producers:
 
-- `AUDIT_LOG_URL` (default: `http://localhost:8080/v1/logs`)
+- `AUDIT_LOG_URL` (default: `http://localhost:8090/v1/logs`)
 - `AUDIT_APP_NAME` (default: language-specific producer name)
 - `AUDIT_TOKEN` (required; the registered client's bearer token)
 
@@ -128,7 +128,7 @@ Environment variables for both producers:
 Set a base URL and token (see [Authorization](#authorization) above):
 
 ```bash
-AUDIT_BASE_URL="http://localhost:8080"
+AUDIT_BASE_URL="http://localhost:8090"
 AUDIT_TOKEN="alog_..."
 ```
 

@@ -42,7 +42,7 @@ your client id and entry position, not a table scan from the start.
 The first request omits `cursor`:
 
 ```bash
-curl -s "http://localhost:8080/v1/logs?limit=50" \
+curl -s "http://localhost:8090/v1/logs?limit=50" \
   -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
@@ -57,7 +57,7 @@ curl -s "http://localhost:8080/v1/logs?limit=50" \
 Each subsequent request passes back the `nextCursor` you were given:
 
 ```bash
-curl -s "http://localhost:8080/v1/logs?limit=50&cursor=djE6MTQyNw" \
+curl -s "http://localhost:8090/v1/logs?limit=50&cursor=djE6MTQyNw" \
   -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
@@ -70,7 +70,7 @@ and may change; construct one yourself and it will be rejected with `400
 {"error":"invalid cursor"}`.
 
 ```javascript
-async function* readAllLogs(token, { baseUrl = "http://localhost:8080", limit = 50 } = {}) {
+async function* readAllLogs(token, { baseUrl = "http://localhost:8090", limit = 50 } = {}) {
   let cursor = null;
 
   for (;;) {
@@ -104,7 +104,7 @@ async function* readAllLogs(token, { baseUrl = "http://localhost:8080", limit = 
 `total` is **not** returned by default. Ask for it explicitly:
 
 ```bash
-curl -s "http://localhost:8080/v1/logs?limit=50&count=true" \
+curl -s "http://localhost:8090/v1/logs?limit=50&count=true" \
   -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
@@ -146,7 +146,7 @@ select only them).
 `offset` still works, so nothing breaks today:
 
 ```bash
-curl -s "http://localhost:8080/v1/logs?limit=50&offset=100" \
+curl -s "http://localhost:8090/v1/logs?limit=50&offset=100" \
   -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 

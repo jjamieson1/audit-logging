@@ -18,7 +18,7 @@ func TestLoadConfigValid(t *testing.T) {
 
 	configPath := filepath.Join(tmp, "config.json")
 	configJSON := `{
-  "server_url": "http://localhost:8080/v1/logs",
+  "server_url": "http://localhost:8090/v1/logs",
   "auth_bearer_token": "secret-token",
   "source_file": "` + sourceFile + `",
   "app_name": "payments-api",

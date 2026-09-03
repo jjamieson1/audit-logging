@@ -19,7 +19,7 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
-	endpoint := getEnv("AUDIT_LOG_URL", "http://localhost:8080/v1/logs")
+	endpoint := getEnv("AUDIT_LOG_URL", "http://localhost:8090/v1/logs")
 	appName := getEnv("AUDIT_APP_NAME", "go-producer")
 	client := auditclient.New(endpoint, nil)
 	client.AuthToken = getEnv("AUDIT_TOKEN", "")

@@ -54,7 +54,7 @@ const (
 func New(endpoint string, httpClient *http.Client) *Client {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
-		endpoint = "http://localhost:8080/v1/logs"
+		endpoint = "http://localhost:8090/v1/logs"
 	}
 
 	if httpClient == nil {

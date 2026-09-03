@@ -62,9 +62,9 @@ Query params:
 Responses carry `nextCursor`, which is `null` on the last page.
 
 ```bash
-curl -s "http://localhost:8080/v1/logs?limit=20" -H "authorization: Bearer $AUDIT_TOKEN"
-curl -s "http://localhost:8080/v1/logs?app=payments-api&level=ERROR" -H "authorization: Bearer $AUDIT_TOKEN"
-curl -s "http://localhost:8080/v1/logs/search?q=timeout&limit=10" -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s "http://localhost:8090/v1/logs?limit=20" -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s "http://localhost:8090/v1/logs?app=payments-api&level=ERROR" -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s "http://localhost:8090/v1/logs/search?q=timeout&limit=10" -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
 Full paging guide: [docs/querying.md](docs/querying.md).
@@ -72,7 +72,7 @@ Full paging guide: [docs/querying.md](docs/querying.md).
 ### Example write
 
 ```bash
-curl -s -X POST http://localhost:8080/v1/logs \
+curl -s -X POST http://localhost:8090/v1/logs \
   -H "authorization: Bearer $AUDIT_TOKEN" \
   -H "content-type: application/json" \
   -d '{
@@ -86,7 +86,7 @@ curl -s -X POST http://localhost:8080/v1/logs \
 ### Verify chain
 
 ```bash
-curl -s http://localhost:8080/v1/verify -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s http://localhost:8090/v1/verify -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
 ## Run
@@ -113,9 +113,9 @@ docker compose up --build
 
 Service endpoints:
 
-- `http://localhost:8080/v1/health`
-- `http://localhost:8080/v1/logs`
-- `http://localhost:8080/v1/verify`
+- `http://localhost:8090/v1/health`
+- `http://localhost:8090/v1/logs`
+- `http://localhost:8090/v1/verify`
 
 Stop stack:
 
@@ -229,7 +229,7 @@ go run ./cmd/server
 
 ## Config
 
-- `PORT` (default `8080`)
+- `PORT` (default `8090`)
 - `BIND_ADDR` (default empty, listening on all interfaces; set `127.0.0.1` for loopback only)
 - `DATABASE_URL` (**required**, always — the client registry lives in PostgreSQL whatever `STORAGE_BACKEND` is)
 - `STORAGE_BACKEND` (default `file`; options: `file`, `postgres`) — where log *entries* go

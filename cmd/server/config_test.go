@@ -9,10 +9,10 @@ func TestLoadConfigListenAddr(t *testing.T) {
 		port     string
 		want     string
 	}{
-		{name: "defaults to all interfaces", bindAddr: "", port: "", want: ":8080"},
-		{name: "binds loopback when set", bindAddr: "127.0.0.1", port: "8080", want: "127.0.0.1:8080"},
+		{name: "defaults to all interfaces", bindAddr: "", port: "", want: ":8090"},
+		{name: "binds loopback when set", bindAddr: "127.0.0.1", port: "8090", want: "127.0.0.1:8090"},
 		{name: "honours custom port", bindAddr: "127.0.0.1", port: "9090", want: "127.0.0.1:9090"},
-		{name: "trims surrounding whitespace", bindAddr: "  127.0.0.1  ", port: "", want: "127.0.0.1:8080"},
+		{name: "trims surrounding whitespace", bindAddr: "  127.0.0.1  ", port: "", want: "127.0.0.1:8090"},
 	}
 
 	for _, tc := range tests {

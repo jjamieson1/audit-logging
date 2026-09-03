@@ -68,7 +68,7 @@ token is not.
 ### Write an entry
 
 ```bash
-curl -s -X POST http://localhost:8080/v1/logs \
+curl -s -X POST http://localhost:8090/v1/logs \
   -H "authorization: Bearer $AUDIT_TOKEN" \
   -H "content-type: application/json" \
   -d '{
@@ -85,21 +85,21 @@ identity behind your token — attribution is not something a caller can set.
 ### Read your entries
 
 ```bash
-curl -s "http://localhost:8080/v1/logs?limit=20" \
+curl -s "http://localhost:8090/v1/logs?limit=20" \
   -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
 ### Search your entries
 
 ```bash
-curl -s "http://localhost:8080/v1/logs/search?q=timeout&limit=10" \
+curl -s "http://localhost:8090/v1/logs/search?q=timeout&limit=10" \
   -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
 ### Verify the chain
 
 ```bash
-curl -s http://localhost:8080/v1/verify \
+curl -s http://localhost:8090/v1/verify \
   -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
@@ -135,7 +135,7 @@ out client-side (they are the entries whose `record.clientId` is absent).
 Go — `clients/go-lib`:
 
 ```go
-client := auditclient.New("http://localhost:8080/v1/logs", nil)
+client := auditclient.New("http://localhost:8090/v1/logs", nil)
 client.AuthToken = os.Getenv("AUDIT_TOKEN")
 ```
 
@@ -143,7 +143,7 @@ Node — `clients/node-lib`:
 
 ```javascript
 const logger = new AuditLogger({
-  endpoint: "http://localhost:8080/v1/logs",
+  endpoint: "http://localhost:8090/v1/logs",
   authToken: process.env.AUDIT_TOKEN
 });
 ```

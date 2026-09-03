@@ -37,21 +37,21 @@ clean:
 	docker compose down -v
 
 health:
-	curl -s http://localhost:8080/v1/health
+	curl -s http://localhost:8090/v1/health
 
 verify:
 	@if [ -z "$(AUDIT_TOKEN)" ]; then \
 		echo "AUDIT_TOKEN is not set. Register a client (go run ./cmd/server clients register --name <name>) and export AUDIT_TOKEN=<token>. See docs/authorization.md."; \
 		exit 1; \
 	fi
-	curl -s http://localhost:8080/v1/verify -H "authorization: Bearer $(AUDIT_TOKEN)"
+	curl -s http://localhost:8090/v1/verify -H "authorization: Bearer $(AUDIT_TOKEN)"
 
 sample-log:
 	@if [ -z "$(AUDIT_TOKEN)" ]; then \
 		echo "AUDIT_TOKEN is not set. Register a client (go run ./cmd/server clients register --name <name>) and export AUDIT_TOKEN=<token>. See docs/authorization.md."; \
 		exit 1; \
 	fi
-	curl -s -X POST http://localhost:8080/v1/logs \
+	curl -s -X POST http://localhost:8090/v1/logs \
 		-H "authorization: Bearer $(AUDIT_TOKEN)" \
 		-H "content-type: application/json" \
 		-d '{"app":"sample-app","level":"INFO","message":"sample log","metadata":{"source":"make"}}'

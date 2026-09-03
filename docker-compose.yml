@@ -24,12 +24,12 @@ services:
       dockerfile: Dockerfile
     container_name: audit-logging
     environment:
-      PORT: 8080
+      PORT: 8090
       STORAGE_BACKEND: postgres
       DATABASE_URL: postgres://audit:audit@postgres:5432/audit?sslmode=disable
       MAX_PAYLOAD_BYTES: 32768
     ports:
-      - "8080:8080"
+      - "8090:8090"
     depends_on:
       postgres:
         condition: service_healthy

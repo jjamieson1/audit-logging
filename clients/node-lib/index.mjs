@@ -1,6 +1,6 @@
 export class AuditLogger {
   constructor({
-    endpoint = "http://localhost:8080/v1/logs",
+    endpoint = "http://localhost:8090/v1/logs",
     fetchImpl = globalThis.fetch,
     authToken = "",
     retry = {}

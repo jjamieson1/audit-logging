@@ -13,5 +13,5 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /out/audit-server /app/audit-server
 
-EXPOSE 8080
+EXPOSE 8090
 ENTRYPOINT ["/app/audit-server"]

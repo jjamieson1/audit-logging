@@ -3,7 +3,7 @@
 Deploys the audit logging service (`cmd/server`) to an Ubuntu 24.04 host over SSH.
 
 The service runs under systemd as a dedicated `audit` user, stores entries in a
-local PostgreSQL 16 database, and listens on `127.0.0.1:8080` only.
+local PostgreSQL 16 database, and listens on `127.0.0.1:8090` only.
 
 ## Layout on the server
 
@@ -28,7 +28,7 @@ at boot. It leaves the service stopped because no binary is installed yet.
 `provision.sh` is safe to re-run. An existing `/etc/audit/audit.env` is never
 overwritten, so the database password survives repeat runs.
 
-The firewall allows SSH only — port 8080 is never opened. Pass `SKIP_UFW=1` to
+The firewall allows SSH only — port 8090 is never opened. Pass `SKIP_UFW=1` to
 leave firewall configuration alone.
 
 ## Deploying
@@ -46,15 +46,15 @@ the health check fails it prints the last 50 journal lines and exits non-zero.
 The service binds to loopback, so use an SSH tunnel:
 
 ```bash
-ssh -N -L 8080:127.0.0.1:8080 muni-demo
+ssh -N -L 8090:127.0.0.1:8090 muni-demo
 ```
 
 Then, from your machine:
 
 ```bash
-curl -s http://localhost:8080/v1/health
-curl -s http://localhost:8080/v1/verify -H "authorization: Bearer $AUDIT_TOKEN"
-curl -s "http://localhost:8080/v1/logs?limit=20" -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s http://localhost:8090/v1/health
+curl -s http://localhost:8090/v1/verify -H "authorization: Bearer $AUDIT_TOKEN"
+curl -s "http://localhost:8090/v1/logs?limit=20" -H "authorization: Bearer $AUDIT_TOKEN"
 ```
 
 All but `/v1/health` need a bearer token — see "Managing clients" below to
@@ -146,10 +146,10 @@ Both scripts read these from the environment, with the defaults shown:
 | `SERVICE_NAME` | `audit` | both |
 | `SERVICE_USER` | `audit` | both |
 | `DB_NAME` / `DB_USER` | `audit` | `provision.sh` |
-| `PORT` | `8080` | `provision.sh` |
+| `PORT` | `8090` | `provision.sh` |
 | `BIND_ADDR` | `127.0.0.1` | `provision.sh` |
 | `SKIP_UFW` | `0` | `provision.sh` |
-| `HEALTH_URL` | `http://127.0.0.1:8080/v1/health` | `deploy.sh` |
+| `HEALTH_URL` | `http://127.0.0.1:8090/v1/health` | `deploy.sh` |
 
 To expose the service beyond loopback, set `BIND_ADDR=0.0.0.0` when provisioning
-and open the port yourself — nothing here opens 8080.
+and open the port yourself — nothing here opens 8090.

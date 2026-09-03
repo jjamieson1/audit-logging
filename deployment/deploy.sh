@@ -16,7 +16,7 @@ ENV_DIR="${ENV_DIR:-/etc/audit}"
 SERVICE_NAME="${SERVICE_NAME:-audit}"
 SERVICE_USER="${SERVICE_USER:-audit}"
 BINARY_NAME="${BINARY_NAME:-audit}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8080/v1/health}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8090/v1/health}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-15}"
 
 if [[ $# -ne 1 ]]; then

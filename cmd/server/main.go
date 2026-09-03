@@ -119,9 +119,9 @@ func loadConfig() Config {
 
 	bindAddr := getEnv("BIND_ADDR", "")
 
-	port, _ := strconv.Atoi(getEnv("PORT", "8080"))
+	port, _ := strconv.Atoi(getEnv("PORT", "8090"))
 	if port <= 0 {
-		port = 8080
+		port = 8090
 	}
 
 	maxPayloadBytes, _ := strconv.ParseInt(getEnv("MAX_PAYLOAD_BYTES", "32768"), 10, 64)

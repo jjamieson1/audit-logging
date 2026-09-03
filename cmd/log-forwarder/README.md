@@ -14,7 +14,7 @@ Current implementation status:
 ## Prerequisites
 
 - Go 1.22+
-- Running audit logging service endpoint (for example `http://localhost:8080/v1/logs`)
+- Running audit logging service endpoint (for example `http://localhost:8090/v1/logs`)
 - Read access to source log file path
 
 ## Quick Start
@@ -46,7 +46,7 @@ go run ./cmd/log-forwarder -config ./configs/log-forwarder.json
 
 Required fields:
 
-- `server_url`: audit service logs endpoint (for example `http://localhost:8080/v1/logs`)
+- `server_url`: audit service logs endpoint (for example `http://localhost:8090/v1/logs`)
 - `auth_bearer_token`: the forwarder's registered client token. An operator
   mints it on the audit host with `audit clients register --name <forwarder>`;
   it is shown once. Every entry the forwarder delivers is attributed to that
@@ -114,8 +114,8 @@ At `verify_interval_ms`, the forwarder calls `/v1/verify` (derived from `server_
 
 Example:
 
-- `server_url: http://localhost:8080/v1/logs`
-- verify endpoint: `http://localhost:8080/v1/verify`
+- `server_url: http://localhost:8090/v1/logs`
+- verify endpoint: `http://localhost:8090/v1/verify`
 
 ## Dead-Letter Format
 

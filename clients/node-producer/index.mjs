@@ -1,6 +1,6 @@
 import { createAuditLogger } from "../node-lib/index.mjs";
 
-const endpoint = process.env.AUDIT_LOG_URL || "http://localhost:8080/v1/logs";
+const endpoint = process.env.AUDIT_LOG_URL || "http://localhost:8090/v1/logs";
 const appName = process.env.AUDIT_APP_NAME || "node-producer";
 const authToken = process.env.AUDIT_TOKEN || "";
 
